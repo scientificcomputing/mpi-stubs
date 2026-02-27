@@ -100,30 +100,34 @@ RUN env MPICC=cc CFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib -lmpi" 
     pip install --no-cache-dir --no-build-isolation mpi4py
 
 # # --- 6. Install PETSc and petsc4py ---
-# ENV PETSC_DIR=/usr/local/petsc SLEPC_DIR=/usr/local/slepc
-# RUN git clone --depth=1 -b v${PETSC_VERSION} https://gitlab.com/petsc/petsc.git ${PETSC_DIR} && \
-#     cd ${PETSC_DIR} && \
-#     ./configure \
-#     PETSC_ARCH=linux-gnu-real64-32 \
-#     --COPTFLAGS="${PETSC_SLEPC_OPTFLAGS}" \
-#     --CXXOPTFLAGS="${PETSC_SLEPC_OPTFLAGS}" \
-#     --with-64-bit-indices=no \
-#     --with-debugging=no \
-#     --with-fc=0 \
-#     --with-cc=cc \
-#     --with-cxx=c++ \
-#     --with-mpi=1 \
-#     --with-mpi-include=/usr/local/include \
-#     --with-mpi-lib=/usr/local/lib/libmpi.so \
-#     --with-shared-libraries=1 \
-#     --download-suitesparse \
-#     --download-superlu \
-#     --with-scalar-type=real \
-#     --with-precision=double && \
-#     make PETSC_ARCH=linux-gnu-real64-32 ${MAKEFLAGS} all && \
-#     cd src/binding/petsc4py && \
-#     PETSC_ARCH=linux-gnu-real64-32 pip -v install --no-cache-dir --no-build-isolation . && \
-#     rm -rf ${PETSC_DIR}/**/tests/ ${PETSC_DIR}/**/obj/ ${PETSC_DIR}/src/ /tmp/*
+ENV PETSC_DIR=/usr/local/petsc SLEPC_DIR=/usr/local/slepc
+RUN git clone --depth=1 -b v${PETSC_VERSION} https://gitlab.com/petsc/petsc.git ${PETSC_DIR} && \
+    cd ${PETSC_DIR} && \
+    ./configure \
+    PETSC_ARCH=linux-gnu-real64-32 \
+    --COPTFLAGS="${PETSC_SLEPC_OPTFLAGS}" \
+    --CXXOPTFLAGS="${PETSC_SLEPC_OPTFLAGS}" \
+    --FOPTFLAGS="${PETSC_SLEPC_OPTFLAGS}" \
+    --with-64-bit-indices=no \
+    --with-debugging=${PETSC_SLEPC_DEBUGGING} \
+    --with-fortran-bindings=no \
+    --with-shared-libraries \
+    --download-hypre \
+    --download-metis \
+    --download-mumps-avoid-mpi-in-place \
+    --download-mumps \
+    --download-ptscotch \
+    --download-scalapack \
+    --download-spai \
+    --download-suitesparse \
+    --download-superlu \
+    --download-superlu_dist \
+    --with-scalar-type=real \
+    --with-precision=double && \
+    make PETSC_ARCH=linux-gnu-real64-32 ${MAKEFLAGS} all && \
+    cd src/binding/petsc4py && \
+    PETSC_ARCH=linux-gnu-real64-32 pip -v install --no-cache-dir --no-build-isolation . && \
+    rm -rf ${PETSC_DIR}/**/tests/ ${PETSC_DIR}/**/obj/ ${PETSC_DIR}/src/ /tmp/*
 
 
 # --- 7. FEniCSx Toolchain (Basix, UFL, FFCx) ---
@@ -141,25 +145,25 @@ RUN git clone https://github.com/FEniCS/ufl.git /tmp/ufl && \
     rm -rf /tmp/*
 
     
-# # --- 8. Build DOLFINx (from local repository context) ---
-# RUN git clone https://github.com/FEniCS/dolfinx.git /dolfinx
-# # We explicitly override FindMPI variables so CMake doesn't try to invoke `mpicc --showme`
-# RUN cd /dolfinx/cpp && \
-#     cmake -G Ninja -DCMAKE_INSTALL_PREFIX=/usr/local \
-#           -DCMAKE_BUILD_TYPE=Release \
-#           -DMPI_C_COMPILER=cc \
-#           -DMPI_CXX_COMPILER=c++ \
-#           -DMPI_C_INCLUDE_DIRS=/usr/local/include \
-#           -DMPI_C_LIBRARIES=/usr/local/lib/libmpi.so \
-#           -DMPI_CXX_INCLUDE_DIRS=/usr/local/include \
-#           -DMPI_CXX_LIBRARIES=/usr/local/lib/libmpi.so \
-#           -DPETSC_DIR=/usr/local/petsc \
-#           -DPETSC_ARCH=linux-gnu-real64-32 \
-#           -B build-dir -S . && \
-#     cmake --build build-dir -j ${BUILD_NP} && \
-#     cmake --install build-dir && \
-#     cd ../python && \
-#     pip install --no-cache-dir . && \
-#     rm -rf /dolfinx/cpp/build-dir
+# --- 8. Build DOLFINx (from local repository context) ---
+RUN git clone https://github.com/FEniCS/dolfinx.git /dolfinx
+# We explicitly override FindMPI variables so CMake doesn't try to invoke `mpicc --showme`
+RUN cd /dolfinx/cpp && \
+    cmake -G Ninja -DCMAKE_INSTALL_PREFIX=/usr/local \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DMPI_C_COMPILER=cc \
+          -DMPI_CXX_COMPILER=c++ \
+          -DMPI_C_INCLUDE_DIRS=/usr/local/include \
+          -DMPI_C_LIBRARIES=/usr/local/lib/libmpi.so \
+          -DMPI_CXX_INCLUDE_DIRS=/usr/local/include \
+          -DMPI_CXX_LIBRARIES=/usr/local/lib/libmpi.so \
+          -DPETSC_DIR=/usr/local/petsc \
+          -DPETSC_ARCH=linux-gnu-real64-32 \
+          -B build-dir -S . && \
+    cmake --build build-dir -j ${BUILD_NP} && \
+    cmake --install build-dir && \
+    cd ../python && \
+    pip install --no-cache-dir . && \
+    rm -rf /dolfinx/cpp/build-dir
 
 WORKDIR /root

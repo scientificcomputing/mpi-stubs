@@ -39,7 +39,11 @@ install(TARGETS mpistub
 )
 
 # Install headers
-install(FILES include/mpi.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES 
+    include/mpi.h 
+    include/mpif.h 
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
 
 # --- Testing ---
 enable_testing()
