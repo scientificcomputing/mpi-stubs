@@ -101,7 +101,9 @@ RUN env MPICC=cc CFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib -lmpi" 
 
 # # --- 6. Install PETSc and petsc4py ---
 ENV PETSC_DIR=/usr/local/petsc SLEPC_DIR=/usr/local/slepc
-RUN git clone --depth=1 -b v${PETSC_VERSION} https://gitlab.com/petsc/petsc.git ${PETSC_DIR} && \
+RUN apt-get -qq update && \
+    apt-get -y install bison flex && \
+    git clone --depth=1 -b v${PETSC_VERSION} https://gitlab.com/petsc/petsc.git ${PETSC_DIR} && \
     cd ${PETSC_DIR} && \
     ./configure \
     PETSC_ARCH=linux-gnu-real64-32 \
