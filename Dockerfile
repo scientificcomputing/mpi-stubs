@@ -70,10 +70,17 @@ RUN wget -nc --quiet https://github.com/doxygen/doxygen/archive/refs/tags/Releas
     cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build-dir -S doxygen-Release_${DOXYGEN_VERSION} && \
     cmake --build build-dir && cmake --install build-dir && rm -rf /tmp/*
 
+# Install KaHIP
 RUN wget -nc --quiet https://github.com/kahip/kahip/archive/v${KAHIP_VERSION}.tar.gz && \
     tar -xf v${KAHIP_VERSION}.tar.gz && \
-    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DNONATIVEOPTIMIZATIONS=on -B build-dir -S KaHIP-${KAHIP_VERSION} && \
-    cmake --build build-dir && cmake --install build-dir && rm -rf /tmp/*
+    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
+          -DNONATIVEOPTIMIZATIONS=on \
+          -DCMAKE_C_COMPILER=mpicc \
+          -DCMAKE_CXX_COMPILER=mpicxx \
+          -B build-dir -S KaHIP-${KAHIP_VERSION} && \
+    cmake --build build-dir && \
+    cmake --install build-dir && \
+    rm -rf /tmp/*
 
 # HDF5 uses our mpicc natively because it is in the PATH
 RUN wget -nc --quiet https://github.com/HDFGroup/hdf5/archive/refs/tags/hdf5_${HDF5_VERSION}.tar.gz && \
