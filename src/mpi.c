@@ -252,6 +252,14 @@ int MPI_Gatherv_init(const void *sendbuf, int sendcount, MPI_Datatype sendtype, 
 int MPI_Gatherv(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, const int recvcounts[], const int displs[], MPI_Datatype recvtype, int root, MPI_Comm comm) { return MPI_Allgatherv(sendbuf, sendcount, sendtype, recvbuf, recvcounts, displs, recvtype, comm); }
 int MPI_Gather(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm) { if(sendbuf!=MPI_IN_PLACE && sendbuf!=recvbuf) memcpy(recvbuf, sendbuf, sendcount*get_type_size(sendtype)); return MPI_SUCCESS; }
 int MPI_Ibarrier(MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
+int MPI_Ibcast_c(void *buffer, MPI_Count count, MPI_Datatype datatype, int root, MPI_Comm comm, MPI_Request *request) { 
+    if(request) *request = MPI_REQUEST_NULL; 
+    return MPI_SUCCESS; 
+}
+int MPI_Ibcast(void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm, MPI_Request *request) { 
+    if(request) *request = MPI_REQUEST_NULL; 
+    return MPI_SUCCESS; 
+}
 int MPI_Op_create(MPI_User_function *user_fn, int commute, MPI_Op *op) { if(op) *op=(MPI_Op)(intptr_t)next_op_id++; return MPI_SUCCESS; }
 int MPI_Op_free(MPI_Op *op) { if(op) *op=MPI_OP_NULL; return MPI_SUCCESS; }
 int MPI_Reduce_c(const void *sendbuf, void *recvbuf, MPI_Count count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm) { if(sendbuf!=MPI_IN_PLACE && sendbuf!=recvbuf) memcpy(recvbuf, sendbuf, count*get_type_size(datatype)); return MPI_SUCCESS; }
@@ -860,6 +868,7 @@ void F_FUNC(scatter)(void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, voi
 void F_FUNC(allgather)(void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
 void F_FUNC(alltoall)(void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
 void F_FUNC(reduce_scatter)(void *sendbuf, void *recvbuf, MPI_Fint *recvcounts, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
+void F_FUNC(ibcast)(void *buffer, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
 
 /* Packing */
 void F_FUNC(pack)(void *inbuf, MPI_Fint *incount, MPI_Fint *datatype, void *outbuf, MPI_Fint *outsize, MPI_Fint *position, MPI_Fint *comm, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
