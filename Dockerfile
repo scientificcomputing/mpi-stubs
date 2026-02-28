@@ -52,7 +52,7 @@ RUN cd /tmp/mpi-stubs && \
 ENV VIRTUAL_ENV=/dolfinx-env
 ENV PATH=/dolfinx-env/bin:$PATH
 RUN python3 -m venv ${VIRTUAL_ENV} && \
-    pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir --upgrade pip "setuptools<74" wheel && \
     pip install --no-cache-dir cython numpy==${NUMPY_VERSION}
 
 # Install mpi4py against our stub
@@ -93,13 +93,14 @@ RUN wget -nc --quiet https://github.com/HDFGroup/hdf5/archive/refs/tags/hdf5_${H
 
 RUN wget -nc --quiet https://github.com/ornladios/ADIOS2/archive/v${ADIOS2_VERSION}.tar.gz -O adios2-v${ADIOS2_VERSION}.tar.gz && \
     mkdir -p adios2-v${ADIOS2_VERSION} && tar -xf adios2-v${ADIOS2_VERSION}.tar.gz -C adios2-v${ADIOS2_VERSION} --strip-components 1 && \
-    cmake -G Ninja -DADIOS2_USE_HDF5=on -DCMAKE_INSTALL_PYTHONDIR=/usr/local/lib/ -DADIOS2_USE_Fortran=off -DBUILD_TESTING=off -DADIOS2_BUILD_EXAMPLES=off -DADIOS2_USE_ZeroMQ=off -B build-dir -S ./adios2-v${ADIOS2_VERSION} && \
+    cmake -G Ninja -DADIOS2_USE_HDF5=on -DCMAKE_INSTALL_PYTHONDIR=/usr/local/lib/ -DADIOS2_USE_Fortran=off -DBUILD_TESTING=off -DADIOS2_BUILD_EXAMPLES=off -DADIOS2_USE_ZeroMQ=off -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx  -B build-dir -S ./adios2-v${ADIOS2_VERSION} && \
     cmake --build build-dir && cmake --install build-dir && rm -rf /tmp/*
 
 RUN git clone -b gmsh_${GMSH_VERSION} --single-branch --depth 1 https://gitlab.onelab.info/gmsh/gmsh.git && \
-    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_DYNAMIC=1 -DENABLE_OPENMP=1 -B build-dir -S gmsh && \
+    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_BUILD_DYNAMIC=1 -DENABLE_OPENMP=1 \
+          -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx \
+          -B build-dir -S gmsh && \
     cmake --build build-dir && cmake --install build-dir && rm -rf /tmp/*
-
 ENV PYTHONPATH=/usr/local/lib:$PYTHONPATH
 
 # --- 5. Install PETSc (Single Arch: real64-32) ---
@@ -149,9 +150,13 @@ RUN git clone --depth=1 -b v${SLEPC_VERSION} https://gitlab.com/slepc/slepc.git 
 
 
 # --- 7. FEniCSx Toolchain (Basix, UFL, FFCx) ---
+ARG DOLFINX_CMAKE_BUILD_TYPE="Release"
+
 RUN git clone https://github.com/FEniCS/basix.git /tmp/basix && \
     cd /tmp/basix/cpp && \
-    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -B build-dir -S . && \
+    cmake -G Ninja -DCMAKE_BUILD_TYPE=${DOLFINX_CMAKE_BUILD_TYPE} \
+    -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx \
+    -B build-dir -S . && \
     cmake --build build-dir && cmake --install build-dir && \
     cd ../python && pip install --no-cache-dir . && \
     rm -rf /tmp/*
@@ -168,7 +173,8 @@ RUN git clone https://github.com/FEniCS/dolfinx.git /dolfinx
 # We explicitly override FindMPI variables so CMake doesn't try to invoke `mpicc --showme`
 RUN cd /dolfinx/cpp && \
     cmake -G Ninja -DCMAKE_INSTALL_PREFIX=/usr/local \
-          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_BUILD_TYPE=${DOLFINX_CMAKE_BUILD_TYPE} \
+          -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx \
           -DPETSC_DIR=/usr/local/petsc \
           -DPETSC_ARCH=linux-gnu-real64-32 \
           -B build-dir -S . && \

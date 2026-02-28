@@ -95,6 +95,17 @@ int MPI_Isend_c(const void *buf, MPI_Count count, MPI_Datatype datatype, int des
 int MPI_Isendrecv_c(const void *sendbuf, MPI_Count sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, MPI_Count recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Request *request) { if(recvbuf!=sendbuf && sendbuf!=MPI_IN_PLACE) memcpy(recvbuf, sendbuf, recvcount*get_type_size(recvtype)); if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
 int MPI_Isendrecv_replace_c(void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int sendtag, int source, int recvtag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
 int MPI_Isendrecv_replace(void *buf, int count, MPI_Datatype datatype, int dest, int sendtag, int source, int recvtag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
+int MPI_Sendrecv_replace(void *buf, int count, MPI_Datatype datatype, 
+                         int dest, int sendtag, int source, int recvtag, 
+                         MPI_Comm comm, MPI_Status *status) {
+    /* In a serial stub, the buffer is already in place. Nothing to do. */
+    if(status) {
+        status->MPI_SOURCE = source;
+        status->MPI_TAG = recvtag;
+        status->MPI_ERROR = MPI_SUCCESS;
+    }
+    return MPI_SUCCESS;
+}
 int MPI_Isendrecv(const void *sendbuf, int sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, int recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Request *request) { if(recvbuf!=sendbuf && sendbuf!=MPI_IN_PLACE) memcpy(recvbuf, sendbuf, recvcount*get_type_size(recvtype)); if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
 int MPI_Isend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
 int MPI_Issend_c(const void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
@@ -851,7 +862,9 @@ void F_FUNC(irecv)(void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *sou
 void F_FUNC(probe)(MPI_Fint *source, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *status, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
 void F_FUNC(iprobe)(MPI_Fint *source, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *flag, MPI_Fint *status, MPI_Fint *ierr) { *flag = 1; *ierr = MPI_SUCCESS; }
 void F_FUNC(get_count)(MPI_Fint *status, MPI_Fint *datatype, MPI_Fint *count, MPI_Fint *ierr) { *count = 0; *ierr = MPI_SUCCESS; }
-
+void F_FUNC(sendrecv_replace)(void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *sendtag, MPI_Fint *source, MPI_Fint *recvtag, MPI_Fint *comm, MPI_Fint *status, MPI_Fint *ierr) { 
+    *ierr = MPI_SUCCESS; 
+}
 /* Requests */
 void F_FUNC(wait)(MPI_Fint *request, MPI_Fint *status, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
 void F_FUNC(waitany)(MPI_Fint *count, MPI_Fint *array_of_requests, MPI_Fint *index, MPI_Fint *status, MPI_Fint *ierr) { *index = 1; *ierr = MPI_SUCCESS; }
