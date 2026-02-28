@@ -1202,6 +1202,9 @@ int MPI_Errhandler_get(MPI_Comm comm, MPI_Errhandler *errhandler);
 int MPI_Type_hvector(int count, int blocklength, MPI_Aint stride, MPI_Datatype oldtype, MPI_Datatype *newtype);
 int MPI_Type_hindexed(int count, int array_of_blocklengths[], MPI_Aint array_of_displacements[], MPI_Datatype oldtype, MPI_Datatype *newtype);
 
+/* --- MPI-3.1 Address Arithmetic (Required by HDF5) --- */
+MPI_Aint MPI_Aint_add(MPI_Aint base, MPI_Aint disp);
+MPI_Aint MPI_Aint_diff(MPI_Aint addr1, MPI_Aint addr2);
 
 /* --- FIX: Backwards compatibility aliases required by PETSc --- */
 typedef void MPI_Comm_errhandler_fn(MPI_Comm *comm, int *error_code, ...);

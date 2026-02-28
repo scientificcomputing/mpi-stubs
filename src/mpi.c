@@ -814,6 +814,9 @@ int MPI_Type_hindexed(int count, int array_of_blocklengths[], MPI_Aint array_of_
     return MPI_Type_create_hindexed(count, array_of_blocklengths, array_of_displacements, oldtype, newtype);
 }
 
+MPI_Aint MPI_Aint_add(MPI_Aint base, MPI_Aint disp) { return base + disp; }
+MPI_Aint MPI_Aint_diff(MPI_Aint addr1, MPI_Aint addr2) { return addr1 - addr2; }
+
 /* =========================================================================
  * Core Fortran Interceptors (Crucial for Linker Resolution)
  * ========================================================================= */
