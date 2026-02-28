@@ -181,7 +181,10 @@ RUN cd /dolfinx/cpp && \
     cmake --build build-dir -j ${BUILD_NP} && \
     cmake --install build-dir && \
     cd ../python && \
-    pip install --no-cache-dir . && \
+    CC=mpicc CXX=mpicxx pip install \
+        --config-settings=cmake.define.CMAKE_C_COMPILER=mpicc \
+        --config-settings=cmake.define.CMAKE_CXX_COMPILER=mpicxx \
+        --no-cache-dir . && \
     rm -rf /dolfinx/cpp/build-dir
 
 WORKDIR /root
