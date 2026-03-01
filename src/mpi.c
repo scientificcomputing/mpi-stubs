@@ -39,9 +39,10 @@ static struct {
     int count;
     MPI_Datatype datatype;
     int tag;
+    MPI_Comm comm; 
     int type; /* 1=send, 2=recv */
     int active;
-    int actual_received;
+    int actual_received_bytes;
     int actual_tag;
 } p2p_queue[MAX_P2P];
 static int next_p2p_id = 1;
@@ -49,25 +50,20 @@ static int next_p2p_id = 1;
 static void match_p2p(int rid) {
     if (!p2p_queue[rid].active) return;
     for (int i=1; i<MAX_P2P; i++) {
-        if (i != rid && p2p_queue[i].active && p2p_queue[i].type != p2p_queue[rid].type) {
+        if (i != rid && p2p_queue[i].active && p2p_queue[i].type != p2p_queue[rid].type && p2p_queue[i].comm == p2p_queue[rid].comm) {
             if (p2p_queue[i].tag == p2p_queue[rid].tag || p2p_queue[i].tag == MPI_ANY_TAG || p2p_queue[rid].tag == MPI_ANY_TAG) {
                 int s_idx = p2p_queue[i].type == 1 ? i : rid;
                 int r_idx = p2p_queue[i].type == 2 ? i : rid;
                 
-                /* Calculate true byte size to support MPI_BYTE and MPI_PACKED mismatches */
                 int s_bytes = p2p_queue[s_idx].count * get_type_size(p2p_queue[s_idx].datatype);
                 int r_bytes = p2p_queue[r_idx].count * get_type_size(p2p_queue[r_idx].datatype);
                 int copy_bytes = s_bytes < r_bytes ? s_bytes : r_bytes;
                 
                 safe_memcpy(p2p_queue[r_idx].buf, p2p_queue[s_idx].buf, copy_bytes);
                 
-                /* Report actual elements received based on the receiver's datatype */
-                int r_type_size = get_type_size(p2p_queue[r_idx].datatype);
-                int s_type_size = get_type_size(p2p_queue[s_idx].datatype);
-                p2p_queue[r_idx].actual_received = r_type_size > 0 ? copy_bytes / r_type_size : 0;
-                p2p_queue[s_idx].actual_received = s_type_size > 0 ? copy_bytes / s_type_size : 0;
+                p2p_queue[r_idx].actual_received_bytes = copy_bytes;
+                p2p_queue[s_idx].actual_received_bytes = copy_bytes;
 
-                /* Record the true tag so MPI_ANY_TAG receivers get the correct info */
                 int final_tag = (p2p_queue[s_idx].tag != MPI_ANY_TAG) ? p2p_queue[s_idx].tag : p2p_queue[r_idx].tag;
                 p2p_queue[r_idx].actual_tag = final_tag;
                 p2p_queue[s_idx].actual_tag = final_tag;
@@ -79,6 +75,7 @@ static void match_p2p(int rid) {
         }
     }
 }
+
 /* --- Attribute Keyval Registry --- */
 #define MAX_KEYVALS 2048
 static struct {
@@ -89,9 +86,9 @@ static struct {
 
 static int next_type_id = 2000;
 
-static void set_status_count(MPI_Status *status, int count) {
+static void set_status_count(MPI_Status *status, int count_in_bytes) {
     if (status && status != MPI_STATUS_IGNORE) {
-        safe_memcpy(&status->MPI_internal[0], &count, sizeof(int));
+        safe_memcpy(&status->MPI_internal[0], &count_in_bytes, sizeof(int));
         status->MPI_ERROR = MPI_SUCCESS;
     }
 }
@@ -102,7 +99,6 @@ static int get_type_size(MPI_Datatype datatype) {
         return custom_type_sizes[id - 2000];
     }
     switch(id) {
-        /* 1-byte types */
         case 516: /* MPI_LB */
         case 517: /* MPI_UB */
             return 0;
@@ -117,15 +113,11 @@ static int get_type_size(MPI_Datatype datatype) {
         case 581: /* MPI_UNSIGNED_CHAR */
         case 583: /* MPI_BYTE */
             return 1;
-
-        /* 2-byte types */
         case 520: /* MPI_SHORT */
         case 524: /* MPI_UNSIGNED_SHORT */
         case 584: /* MPI_INT16_T */
         case 585: /* MPI_UINT16_T */
             return 2;
-
-        /* 4-byte types */
         case 521: /* MPI_INT */
         case 525: /* MPI_UNSIGNED */
         case 528: /* MPI_FLOAT */
@@ -135,8 +127,6 @@ static int get_type_size(MPI_Datatype datatype) {
         case 592: /* MPI_INT32_T */
         case 593: /* MPI_UINT32_T */
             return 4;
-
-        /* 8-byte types */
         case 513: /* MPI_AINT */
         case 514: /* MPI_COUNT */
         case 515: /* MPI_OFFSET */
@@ -148,32 +138,24 @@ static int get_type_size(MPI_Datatype datatype) {
         case 600: /* MPI_INT64_T */
         case 601: /* MPI_UINT64_T */
             return 8;
-
-        /* 16-byte types */
         case 534: /* MPI_C_DOUBLE_COMPLEX */
         case 535: /* MPI_CXX_DOUBLE_COMPLEX */
         case 541: /* MPI_DOUBLE_COMPLEX */
         case 544: /* MPI_LONG_DOUBLE */
             return 16;
-
-        /* Native architecture-dependent types */
         case 522: return sizeof(long);
         case 526: return sizeof(unsigned long);
         case 523: return sizeof(long long);
         case 527: return sizeof(unsigned long long);
-
-        /* Composite / Struct Types */
-        case 552: return sizeof(struct { float a; int b; });     /* MPI_FLOAT_INT */
-        case 553: return sizeof(struct { double a; int b; });    /* MPI_DOUBLE_INT */
-        case 554: return sizeof(struct { long a; int b; });      /* MPI_LONG_INT */
-        case 555: return sizeof(struct { int a; int b; });       /* MPI_2INT */
-        case 556: return sizeof(struct { short a; int b; });     /* MPI_SHORT_INT */
-        case 557: return sizeof(struct { long double a; int b; });/* MPI_LONG_DOUBLE_INT */
-        case 560: return sizeof(float) * 2;                      /* MPI_2REAL */
-        case 561: return sizeof(double) * 2;                     /* MPI_2DOUBLE_PRECISION */
-        case 562: return sizeof(int) * 2;                        /* MPI_2INTEGER */
-
-        /* Fallback */
+        case 552: return sizeof(struct { float a; int b; });     
+        case 553: return sizeof(struct { double a; int b; });    
+        case 554: return sizeof(struct { long a; int b; });      
+        case 555: return sizeof(struct { int a; int b; });       
+        case 556: return sizeof(struct { short a; int b; });     
+        case 557: return sizeof(struct { long double a; int b; });
+        case 560: return sizeof(float) * 2;                      
+        case 561: return sizeof(double) * 2;                     
+        case 562: return sizeof(int) * 2;                        
         default: return 4;
     }
 }
@@ -198,37 +180,30 @@ int MPI_Comm_detach_buffer_c(MPI_Comm comm, void *buffer_addr, MPI_Count *size) 
 int MPI_Comm_detach_buffer(MPI_Comm comm, void *buffer_addr, int *size) { if(size) *size=0; return MPI_SUCCESS; }
 int MPI_Comm_flush_buffer(MPI_Comm comm) { return MPI_SUCCESS; }
 int MPI_Comm_iflush_buffer(MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
-int MPI_Get_count_c(const MPI_Status *status, MPI_Datatype datatype, MPI_Count *count) { int c; MPI_Get_count(status, datatype, &c); if(count) *count=c; return MPI_SUCCESS; }
-int MPI_Get_count(const MPI_Status *status, MPI_Datatype datatype, int *count) { if(count && status && status!=MPI_STATUS_IGNORE) safe_memcpy(count, &status->MPI_internal[0], sizeof(int)); return MPI_SUCCESS; }
-int MPI_Ibsend_c(const void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
-int MPI_Ibsend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
-int MPI_Improbe(int source, int tag, MPI_Comm comm, int *flag, MPI_Message *message, MPI_Status *status) { if(flag) *flag=0; return MPI_SUCCESS; }
-int MPI_Imrecv_c(void *buf, MPI_Count count, MPI_Datatype datatype, MPI_Message *message, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
-int MPI_Imrecv(void *buf, int count, MPI_Datatype datatype, MPI_Message *message, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
-// int MPI_Irsend_c(const void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
-// int MPI_Irsend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
-int MPI_Isendrecv_c(const void *sendbuf, MPI_Count sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, MPI_Count recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Request *request) { if(recvbuf!=sendbuf && sendbuf!=MPI_IN_PLACE) safe_memcpy(recvbuf, sendbuf, recvcount*get_type_size(recvtype)); if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
-int MPI_Isendrecv_replace_c(void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int sendtag, int source, int recvtag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
-int MPI_Isendrecv_replace(void *buf, int count, MPI_Datatype datatype, int dest, int sendtag, int source, int recvtag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
-int MPI_Sendrecv_replace(void *buf, int count, MPI_Datatype datatype, 
-                         int dest, int sendtag, int source, int recvtag, 
-                         MPI_Comm comm, MPI_Status *status) {
-    /* In a serial stub, the buffer is already in place. Nothing to do. */
-    if(status) {
-        status->MPI_SOURCE = source;
-        status->MPI_TAG = recvtag;
-        status->MPI_ERROR = MPI_SUCCESS;
+
+int MPI_Get_count(const MPI_Status *status, MPI_Datatype datatype, int *count) { 
+    if(count && status && status!=MPI_STATUS_IGNORE) {
+        int bytes_received = 0;
+        safe_memcpy(&bytes_received, &status->MPI_internal[0], sizeof(int));
+        int type_sz = get_type_size(datatype);
+        *count = type_sz > 0 ? bytes_received / type_sz : 0;
     }
-    return MPI_SUCCESS;
+    return MPI_SUCCESS; 
 }
-int MPI_Isendrecv(const void *sendbuf, int sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, int recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Request *request) { if(recvbuf!=sendbuf && sendbuf!=MPI_IN_PLACE) safe_memcpy(recvbuf, sendbuf, recvcount*get_type_size(recvtype)); if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
+int MPI_Get_count_c(const MPI_Status *status, MPI_Datatype datatype, MPI_Count *count) { 
+    int c; MPI_Get_count(status, datatype, &c); if(count) *count=c; return MPI_SUCCESS; 
+}
+
+int MPI_Ibsend_c(const void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { return MPI_Isend_c(buf, count, datatype, dest, tag, comm, request); }
+int MPI_Ibsend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { return MPI_Isend(buf, count, datatype, dest, tag, comm, request); }
 
 int MPI_Isend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { 
     if(request) {
         if (dest == MPI_PROC_NULL) { *request = MPI_REQUEST_NULL; return MPI_SUCCESS; }
         int rid = next_p2p_id++; if (next_p2p_id >= MAX_P2P) next_p2p_id = 1;
         p2p_queue[rid].buf = (void*)buf; p2p_queue[rid].count = count; p2p_queue[rid].datatype = datatype;
-        p2p_queue[rid].tag = tag; p2p_queue[rid].type = 1; p2p_queue[rid].active = 1; p2p_queue[rid].actual_received = 0; p2p_queue[rid].actual_tag = tag;
+        p2p_queue[rid].tag = tag; p2p_queue[rid].comm = comm; p2p_queue[rid].type = 1; p2p_queue[rid].active = 1; 
+        p2p_queue[rid].actual_received_bytes = 0; p2p_queue[rid].actual_tag = tag;
         *request = (MPI_Request)(intptr_t)rid;
         match_p2p(rid);
     }
@@ -239,7 +214,8 @@ int MPI_Irecv(void *buf, int count, MPI_Datatype datatype, int source, int tag, 
         if (source == MPI_PROC_NULL) { *request = MPI_REQUEST_NULL; return MPI_SUCCESS; }
         int rid = next_p2p_id++; if (next_p2p_id >= MAX_P2P) next_p2p_id = 1;
         p2p_queue[rid].buf = buf; p2p_queue[rid].count = count; p2p_queue[rid].datatype = datatype;
-        p2p_queue[rid].tag = tag; p2p_queue[rid].type = 2; p2p_queue[rid].active = 1; p2p_queue[rid].actual_received = 0; p2p_queue[rid].actual_tag = tag;
+        p2p_queue[rid].tag = tag; p2p_queue[rid].comm = comm; p2p_queue[rid].type = 2; p2p_queue[rid].active = 1; 
+        p2p_queue[rid].actual_received_bytes = 0; p2p_queue[rid].actual_tag = tag;
         *request = (MPI_Request)(intptr_t)rid;
         match_p2p(rid);
     }
@@ -248,196 +224,44 @@ int MPI_Irecv(void *buf, int count, MPI_Datatype datatype, int source, int tag, 
 int MPI_Isend_c(const void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { return MPI_Isend(buf, count, datatype, dest, tag, comm, request); }
 int MPI_Irecv_c(void *buf, MPI_Count count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request) { return MPI_Irecv(buf, count, datatype, source, tag, comm, request); }
 
+int MPI_Send(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm) { MPI_Request req; MPI_Isend(buf, count, datatype, dest, tag, comm, &req); return MPI_Wait(&req, MPI_STATUS_IGNORE); }
+int MPI_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Status *status) { MPI_Request req; MPI_Irecv(buf, count, datatype, source, tag, comm, &req); return MPI_Wait(&req, status); }
+int MPI_Send_c(const void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm) { MPI_Request req; MPI_Isend_c(buf, count, datatype, dest, tag, comm, &req); return MPI_Wait(&req, MPI_STATUS_IGNORE); }
+int MPI_Recv_c(void *buf, MPI_Count count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Status *status) { MPI_Request req; MPI_Irecv_c(buf, count, datatype, source, tag, comm, &req); return MPI_Wait(&req, status); }
 
-
-int MPI_Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]) { 
-    for(int i=0; i<count; i++){ 
-        MPI_Status *stat = (array_of_statuses && array_of_statuses != MPI_STATUSES_IGNORE) ? &array_of_statuses[i] : MPI_STATUS_IGNORE;
-        if(array_of_requests) MPI_Wait(&array_of_requests[i], stat);
-    } 
-    return MPI_SUCCESS; 
-}
-
-int MPI_Test(MPI_Request *request, int *flag, MPI_Status *status) { 
-    if (!request || *request == MPI_REQUEST_NULL) {
-        if (flag) *flag = 1;
-        return MPI_SUCCESS;
-    }
-    int rid = (int)(intptr_t)*request;
-    if (rid > 0 && rid < MAX_P2P && p2p_queue[rid].active) {
-        if (flag) *flag = 0; /* Message not yet matched! Do not destroy it! */
-        return MPI_SUCCESS;
-    }
-    if (flag) *flag = 1;
-    return MPI_Wait(request, status);
-}
-
-int MPI_Testall(int count, MPI_Request array_of_requests[], int *flag, MPI_Status array_of_statuses[]) { 
-    int all_done = 1;
-    for (int i=0; i<count; i++) {
-        if (array_of_requests && array_of_requests[i] != MPI_REQUEST_NULL) {
-            int rid = (int)(intptr_t)array_of_requests[i];
-            if (rid > 0 && rid < MAX_P2P && p2p_queue[rid].active) {
-                all_done = 0;
-                break;
-            }
-        }
-    }
-    if (flag) *flag = all_done;
-    if (all_done) {
-        for (int i=0; i<count; i++) {
-            MPI_Status *stat = (array_of_statuses && array_of_statuses != MPI_STATUSES_IGNORE) ? &array_of_statuses[i] : MPI_STATUS_IGNORE;
-            if (array_of_requests) MPI_Wait(&array_of_requests[i], stat);
-        }
-    }
-    return MPI_SUCCESS; 
-}
-
-int MPI_Testany(int count, MPI_Request array_of_requests[], int *index, int *flag, MPI_Status *status) { 
-    if (flag) *flag = 0;
-    if (index) *index = MPI_UNDEFINED;
-    for (int i=0; i<count; i++) {
-        if (array_of_requests && array_of_requests[i] != MPI_REQUEST_NULL) {
-            int rid = (int)(intptr_t)array_of_requests[i];
-            if (rid > 0 && rid < MAX_P2P && !p2p_queue[rid].active) {
-                if (flag) *flag = 1;
-                if (index) *index = i;
-                return MPI_Wait(&array_of_requests[i], status);
-            }
-        }
-    }
-    return MPI_SUCCESS; 
-}
-
-int MPI_Testsome(int incount, MPI_Request array_of_requests[], int *outcount, int array_of_indices[], MPI_Status array_of_statuses[]) { 
-    int completed = 0;
-    for (int i=0; i<incount; i++) {
-        if (array_of_requests && array_of_requests[i] != MPI_REQUEST_NULL) {
-            int rid = (int)(intptr_t)array_of_requests[i];
-            if (rid > 0 && rid < MAX_P2P && !p2p_queue[rid].active) {
-                if (array_of_indices) array_of_indices[completed] = i;
-                MPI_Status *stat = (array_of_statuses && array_of_statuses != MPI_STATUSES_IGNORE) ? &array_of_statuses[completed] : MPI_STATUS_IGNORE;
-                MPI_Wait(&array_of_requests[i], stat);
-                completed++;
-            }
-        }
-    }
-    if (outcount) *outcount = completed > 0 ? completed : MPI_UNDEFINED;
-    return MPI_SUCCESS; 
-}
-
-int MPI_Iprobe(int source, int tag, MPI_Comm comm, int *flag, MPI_Status *status) { 
-    if(flag) *flag=0; 
-    for(int i=1; i<MAX_P2P; i++) {
-        if(p2p_queue[i].active && p2p_queue[i].type == 1) { /* Found an unreceived send */
-            if(p2p_queue[i].tag == tag || tag == MPI_ANY_TAG) {
-                *flag = 1;
-                if(status && status != MPI_STATUS_IGNORE) {
-                    status->MPI_SOURCE = 0;
-                    status->MPI_TAG = p2p_queue[i].tag;
-                    set_status_count(status, p2p_queue[i].count);
-                }
-                return MPI_SUCCESS;
-            }
-        }
-    }
-    return MPI_SUCCESS; 
-}
-
-int MPI_Probe(int source, int tag, MPI_Comm comm, MPI_Status *status) { 
-    int flag = 0;
-    MPI_Iprobe(source, tag, comm, &flag, status);
-    return MPI_SUCCESS; 
-}
-int MPI_Send(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm) { 
-    MPI_Request req; MPI_Isend(buf, count, datatype, dest, tag, comm, &req); 
-    return MPI_Wait(&req, MPI_STATUS_IGNORE); 
-}
-int MPI_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Status *status) { 
-    MPI_Request req; MPI_Irecv(buf, count, datatype, source, tag, comm, &req); 
-    return MPI_Wait(&req, status); 
-}
-int MPI_Send_c(const void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm) { 
-    MPI_Request req; MPI_Isend_c(buf, count, datatype, dest, tag, comm, &req); 
-    return MPI_Wait(&req, MPI_STATUS_IGNORE); 
-}
-int MPI_Recv_c(void *buf, MPI_Count count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Status *status) { 
-    MPI_Request req; MPI_Irecv_c(buf, count, datatype, source, tag, comm, &req); 
-    return MPI_Wait(&req, status); 
-}
-
-int MPI_Sendrecv_c(const void *sendbuf, MPI_Count sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, MPI_Count recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Status *status) { 
-    MPI_Count copy_count = sendcount < recvcount ? sendcount : recvcount;
-    if(recvbuf!=sendbuf && sendbuf!=MPI_IN_PLACE) safe_memcpy(recvbuf, sendbuf, copy_count*get_type_size(recvtype)); 
-    if(status!=MPI_STATUS_IGNORE){
-        status->MPI_SOURCE=source;
-        status->MPI_TAG=recvtag;
-        set_status_count(status, copy_count);
-    } 
-    return MPI_SUCCESS; 
-}
 int MPI_Sendrecv(const void *sendbuf, int sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, int recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Status *status) { 
-    int copy_count = sendcount < recvcount ? sendcount : recvcount;
-    if(recvbuf!=sendbuf && sendbuf!=MPI_IN_PLACE) safe_memcpy(recvbuf, sendbuf, copy_count*get_type_size(recvtype)); 
-    if(status!=MPI_STATUS_IGNORE){
-        status->MPI_SOURCE=source;
-        status->MPI_TAG=recvtag;
-        set_status_count(status, copy_count);
-    } 
-    return MPI_SUCCESS; 
+    int s_bytes = sendcount * get_type_size(sendtype); int r_bytes = recvcount * get_type_size(recvtype); int copy_bytes = s_bytes < r_bytes ? s_bytes : r_bytes;
+    if(recvbuf!=sendbuf && sendbuf!=MPI_IN_PLACE) safe_memcpy(recvbuf, sendbuf, copy_bytes); 
+    if(status!=MPI_STATUS_IGNORE){ status->MPI_SOURCE=source; status->MPI_TAG=recvtag; set_status_count(status, copy_bytes); } return MPI_SUCCESS; 
 }
+int MPI_Sendrecv_c(const void *sendbuf, MPI_Count sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, MPI_Count recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Status *status) { 
+    int s_bytes = sendcount * get_type_size(sendtype); int r_bytes = recvcount * get_type_size(recvtype); int copy_bytes = s_bytes < r_bytes ? s_bytes : r_bytes;
+    if(recvbuf!=sendbuf && sendbuf!=MPI_IN_PLACE) safe_memcpy(recvbuf, sendbuf, copy_bytes); 
+    if(status!=MPI_STATUS_IGNORE){ status->MPI_SOURCE=source; status->MPI_TAG=recvtag; set_status_count(status, copy_bytes); } return MPI_SUCCESS; 
+}
+int MPI_Sendrecv_replace(void *buf, int count, MPI_Datatype datatype, int dest, int sendtag, int source, int recvtag, MPI_Comm comm, MPI_Status *status) { if(status){ status->MPI_SOURCE=source; status->MPI_TAG=recvtag; set_status_count(status, count*get_type_size(datatype)); } return MPI_SUCCESS; }
+int MPI_Sendrecv_replace_c(void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int sendtag, int source, int recvtag, MPI_Comm comm, MPI_Status *status) { if(status){ status->MPI_SOURCE=source; status->MPI_TAG=recvtag; set_status_count(status, count*get_type_size(datatype)); } return MPI_SUCCESS; }
+int MPI_Isendrecv(const void *sendbuf, int sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, int recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Request *request) { return MPI_Sendrecv(sendbuf, sendcount, sendtype, dest, sendtag, recvbuf, recvcount, recvtype, source, recvtag, comm, MPI_STATUS_IGNORE); }
+int MPI_Isendrecv_c(const void *sendbuf, MPI_Count sendcount, MPI_Datatype sendtype, int dest, int sendtag, void *recvbuf, MPI_Count recvcount, MPI_Datatype recvtype, int source, int recvtag, MPI_Comm comm, MPI_Request *request) { return MPI_Sendrecv_c(sendbuf, sendcount, sendtype, dest, sendtag, recvbuf, recvcount, recvtype, source, recvtag, comm, MPI_STATUS_IGNORE); }
+int MPI_Isendrecv_replace(void *buf, int count, MPI_Datatype datatype, int dest, int sendtag, int source, int recvtag, MPI_Comm comm, MPI_Request *request) { return MPI_Sendrecv_replace(buf, count, datatype, dest, sendtag, source, recvtag, comm, MPI_STATUS_IGNORE); }
+int MPI_Isendrecv_replace_c(void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int sendtag, int source, int recvtag, MPI_Comm comm, MPI_Request *request) { return MPI_Sendrecv_replace_c(buf, count, datatype, dest, sendtag, source, recvtag, comm, MPI_STATUS_IGNORE); }
+
 int MPI_Issend_c(const void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { return MPI_Isend_c(buf, count, datatype, dest, tag, comm, request); }
 int MPI_Issend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { return MPI_Isend(buf, count, datatype, dest, tag, comm, request); }
-
 int MPI_Irsend_c(const void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { return MPI_Isend_c(buf, count, datatype, dest, tag, comm, request); }
 int MPI_Irsend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { return MPI_Isend(buf, count, datatype, dest, tag, comm, request); }
-
 int MPI_Ssend_c(const void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm) { return MPI_Send_c(buf, count, datatype, dest, tag, comm); }
 int MPI_Ssend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm) { return MPI_Send(buf, count, datatype, dest, tag, comm); }
-
 int MPI_Rsend_c(const void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm) { return MPI_Send_c(buf, count, datatype, dest, tag, comm); }
 int MPI_Rsend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm) { return MPI_Send(buf, count, datatype, dest, tag, comm); }
-// int MPI_Issend_c(const void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
-// int MPI_Issend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
-int MPI_Mprobe(int source, int tag, MPI_Comm comm, MPI_Message *message, MPI_Status *status) { if(message) *message=MPI_MESSAGE_NULL; return MPI_SUCCESS; }
-int MPI_Mrecv_c(void *buf, MPI_Count count, MPI_Datatype datatype, MPI_Message *message, MPI_Status *status) { return MPI_SUCCESS; }
-int MPI_Mrecv(void *buf, int count, MPI_Datatype datatype, MPI_Message *message, MPI_Status *status) { return MPI_SUCCESS; }
-int MPI_Recv_init_c(void *buf, MPI_Count count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
-int MPI_Recv_init(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
-int MPI_Request_free(MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
-int MPI_Request_get_status_all(int count, const MPI_Request array_of_requests[], int *flag, MPI_Status array_of_statuses[]) { if(flag) *flag=1; return MPI_SUCCESS; }
-int MPI_Request_get_status_any(int count, const MPI_Request array_of_requests[], int *index, int *flag, MPI_Status *status) { if(flag) *flag=1; if(index) *index=0; return MPI_SUCCESS; }
-int MPI_Request_get_status_some(int incount, const MPI_Request array_of_requests[], int *outcount, int array_of_indices[], MPI_Status array_of_statuses[]) { if(outcount) *outcount=0; return MPI_SUCCESS; }
-int MPI_Request_get_status(MPI_Request request, int *flag, MPI_Status *status) { if(flag) *flag=1; return MPI_SUCCESS; }
-// int MPI_Rsend_c(const void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm) { return MPI_SUCCESS; }
-int MPI_Rsend_init_c(const void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
-int MPI_Rsend_init(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
-// int MPI_Rsend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm) { return MPI_SUCCESS; }
-int MPI_Send_init_c(const void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
-int MPI_Send_init(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
-int MPI_Sendrecv_replace_c(void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int sendtag, int source, int recvtag, MPI_Comm comm, MPI_Status *status) { if(status!=MPI_STATUS_IGNORE){status->MPI_SOURCE=source;status->MPI_TAG=recvtag;set_status_count(status,count);} return MPI_SUCCESS; }
-int MPI_Session_attach_buffer_c(MPI_Session session, void *buffer, MPI_Count size) { return MPI_SUCCESS; }
-int MPI_Session_attach_buffer(MPI_Session session, void *buffer, int size) { return MPI_SUCCESS; }
-int MPI_Session_detach_buffer_c(MPI_Session session, void *buffer_addr, MPI_Count *size) { if(size) *size=0; return MPI_SUCCESS; }
-int MPI_Session_detach_buffer(MPI_Session session, void *buffer_addr, int *size) { if(size) *size=0; return MPI_SUCCESS; }
-int MPI_Session_flush_buffer(MPI_Session session) { return MPI_SUCCESS; }
-int MPI_Session_iflush_buffer(MPI_Session session, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
-// int MPI_Ssend_c(const void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm) { return MPI_SUCCESS; }
-int MPI_Ssend_init_c(const void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
-int MPI_Ssend_init(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
-// int MPI_Ssend(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm) { return MPI_SUCCESS; }
-int MPI_Startall(int count, MPI_Request array_of_requests[]) { return MPI_SUCCESS; }
-int MPI_Start(MPI_Request *request) { return MPI_SUCCESS; }
-int MPI_Status_get_error(const MPI_Status *status, int *err) { if(err) *err=MPI_SUCCESS; return MPI_SUCCESS; }
-int MPI_Status_get_source(const MPI_Status *status, int *source) { if(source) *source=0; return MPI_SUCCESS; }
-int MPI_Status_get_tag(const MPI_Status *status, int *tag) { if(tag) *tag=0; return MPI_SUCCESS; }
+
 int MPI_Wait(MPI_Request *request, MPI_Status *status) { 
     if(request && *request != MPI_REQUEST_NULL) {
         int rid = (int)(intptr_t)*request;
         if(rid > 0 && rid < MAX_P2P) {
-            p2p_queue[rid].active = 0; /* Fallback: force complete to avoid deadlocks */
+            p2p_queue[rid].active = 0; 
             if (status && status != MPI_STATUS_IGNORE) {
-                set_status_count(status, p2p_queue[rid].actual_received);
+                set_status_count(status, p2p_queue[rid].actual_received_bytes);
                 status->MPI_SOURCE = 0;
                 status->MPI_TAG = p2p_queue[rid].actual_tag;
             }
@@ -448,6 +272,14 @@ int MPI_Wait(MPI_Request *request, MPI_Status *status) {
         status->MPI_SOURCE = MPI_ANY_SOURCE;
         status->MPI_TAG = MPI_ANY_TAG;
     }
+    return MPI_SUCCESS; 
+}
+
+int MPI_Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]) { 
+    for(int i=0; i<count; i++){ 
+        MPI_Status *stat = (array_of_statuses && array_of_statuses != MPI_STATUSES_IGNORE) ? &array_of_statuses[i] : MPI_STATUS_IGNORE;
+        if(array_of_requests) MPI_Wait(&array_of_requests[i], stat);
+    } 
     return MPI_SUCCESS; 
 }
 
@@ -500,6 +332,96 @@ int MPI_Waitsome(int incount, MPI_Request array_of_requests[], int *outcount, in
     if(outcount) *outcount = MPI_UNDEFINED;
     return MPI_SUCCESS; 
 }
+
+int MPI_Test(MPI_Request *request, int *flag, MPI_Status *status) { 
+    if (!request || *request == MPI_REQUEST_NULL) { if (flag) *flag = 1; return MPI_SUCCESS; }
+    int rid = (int)(intptr_t)*request;
+    if (rid > 0 && rid < MAX_P2P && p2p_queue[rid].active) { if (flag) *flag = 0; return MPI_SUCCESS; }
+    if (flag) *flag = 1; return MPI_Wait(request, status);
+}
+
+int MPI_Testall(int count, MPI_Request array_of_requests[], int *flag, MPI_Status array_of_statuses[]) { 
+    int all_done = 1;
+    for (int i=0; i<count; i++) {
+        if (array_of_requests && array_of_requests[i] != MPI_REQUEST_NULL) {
+            int rid = (int)(intptr_t)array_of_requests[i];
+            if (rid > 0 && rid < MAX_P2P && p2p_queue[rid].active) { all_done = 0; break; }
+        }
+    }
+    if (flag) *flag = all_done;
+    if (all_done) MPI_Waitall(count, array_of_requests, array_of_statuses);
+    return MPI_SUCCESS; 
+}
+
+int MPI_Testany(int count, MPI_Request array_of_requests[], int *index, int *flag, MPI_Status *status) { 
+    if (flag) *flag = 0; if (index) *index = MPI_UNDEFINED;
+    for (int i=0; i<count; i++) {
+        if (array_of_requests && array_of_requests[i] != MPI_REQUEST_NULL) {
+            int rid = (int)(intptr_t)array_of_requests[i];
+            if (rid > 0 && rid < MAX_P2P && !p2p_queue[rid].active) {
+                if (flag) *flag = 1; if (index) *index = i;
+                return MPI_Wait(&array_of_requests[i], status);
+            }
+        }
+    }
+    return MPI_SUCCESS; 
+}
+
+int MPI_Testsome(int incount, MPI_Request array_of_requests[], int *outcount, int array_of_indices[], MPI_Status array_of_statuses[]) { 
+    int completed = 0;
+    for (int i=0; i<incount; i++) {
+        if (array_of_requests && array_of_requests[i] != MPI_REQUEST_NULL) {
+            int rid = (int)(intptr_t)array_of_requests[i];
+            if (rid > 0 && rid < MAX_P2P && !p2p_queue[rid].active) {
+                if (array_of_indices) array_of_indices[completed] = i;
+                MPI_Status *stat = (array_of_statuses && array_of_statuses != MPI_STATUSES_IGNORE) ? &array_of_statuses[completed] : MPI_STATUS_IGNORE;
+                MPI_Wait(&array_of_requests[i], stat);
+                completed++;
+            }
+        }
+    }
+    if (outcount) *outcount = completed > 0 ? completed : MPI_UNDEFINED;
+    return MPI_SUCCESS; 
+}
+
+int MPI_Iprobe(int source, int tag, MPI_Comm comm, int *flag, MPI_Status *status) { 
+    if(flag) *flag=0; 
+    for(int i=1; i<MAX_P2P; i++) {
+        if(p2p_queue[i].active && p2p_queue[i].type == 1 && p2p_queue[i].comm == comm) {
+            if(p2p_queue[i].tag == tag || tag == MPI_ANY_TAG) {
+                *flag = 1;
+                if(status && status != MPI_STATUS_IGNORE) {
+                    status->MPI_SOURCE = 0;
+                    status->MPI_TAG = p2p_queue[i].tag;
+                    set_status_count(status, p2p_queue[i].count * get_type_size(p2p_queue[i].datatype));
+                }
+                return MPI_SUCCESS;
+            }
+        }
+    }
+    return MPI_SUCCESS; 
+}
+int MPI_Probe(int source, int tag, MPI_Comm comm, MPI_Status *status) { int flag = 0; MPI_Iprobe(source, tag, comm, &flag, status); return MPI_SUCCESS; }
+int MPI_Improbe(int source, int tag, MPI_Comm comm, int *flag, MPI_Message *message, MPI_Status *status) { if(flag) *flag=0; return MPI_SUCCESS; }
+int MPI_Mprobe(int source, int tag, MPI_Comm comm, MPI_Message *message, MPI_Status *status) { if(message) *message=MPI_MESSAGE_NULL; return MPI_SUCCESS; }
+int MPI_Imrecv(void *buf, int count, MPI_Datatype datatype, MPI_Message *message, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
+int MPI_Imrecv_c(void *buf, MPI_Count count, MPI_Datatype datatype, MPI_Message *message, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
+int MPI_Mrecv(void *buf, int count, MPI_Datatype datatype, MPI_Message *message, MPI_Status *status) { return MPI_SUCCESS; }
+int MPI_Mrecv_c(void *buf, MPI_Count count, MPI_Datatype datatype, MPI_Message *message, MPI_Status *status) { return MPI_SUCCESS; }
+int MPI_Recv_init_c(void *buf, MPI_Count count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
+int MPI_Recv_init(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
+int MPI_Request_free(MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
+int MPI_Request_get_status_all(int count, const MPI_Request array_of_requests[], int *flag, MPI_Status array_of_statuses[]) { if(flag) *flag=1; return MPI_SUCCESS; }
+int MPI_Request_get_status_any(int count, const MPI_Request array_of_requests[], int *index, int *flag, MPI_Status *status) { if(flag) *flag=1; if(index) *index=0; return MPI_SUCCESS; }
+int MPI_Request_get_status_some(int incount, const MPI_Request array_of_requests[], int *outcount, int array_of_indices[], MPI_Status array_of_statuses[]) { if(outcount) *outcount=0; return MPI_SUCCESS; }
+int MPI_Request_get_status(MPI_Request request, int *flag, MPI_Status *status) { if(flag) *flag=1; return MPI_SUCCESS; }
+int MPI_Send_init_c(const void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
+int MPI_Send_init(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
+int MPI_Startall(int count, MPI_Request array_of_requests[]) { return MPI_SUCCESS; }
+int MPI_Start(MPI_Request *request) { return MPI_SUCCESS; }
+int MPI_Status_get_error(const MPI_Status *status, int *err) { if(err) *err=MPI_SUCCESS; return MPI_SUCCESS; }
+int MPI_Status_get_source(const MPI_Status *status, int *source) { if(source) *source=0; return MPI_SUCCESS; }
+int MPI_Status_get_tag(const MPI_Status *status, int *tag) { if(tag) *tag=0; return MPI_SUCCESS; }
 
 /* --- A.3.2 Partitioned Communication --- */
 int MPI_Parrived(MPI_Request request, int partition, int *flag) { if(flag) *flag=1; return MPI_SUCCESS; }
@@ -888,7 +810,7 @@ int MPI_Comm_dup(MPI_Comm comm, MPI_Comm *newcomm) {
         *newcomm = (MPI_Comm)(intptr_t)new_cid;
         int c = (int)(intptr_t)comm;
         
-        /* FIX: Inherit graph topology degrees so Neighborhood transfers don't silently drop! */
+        /* Inherit graph topology degrees so Neighborhood transfers don't silently drop! */
         if (new_cid < MAX_COMM_IDS && c >= 0 && c < MAX_COMM_IDS) {
             comm_degrees[new_cid] = comm_degrees[c];
         }
