@@ -256,6 +256,31 @@ int MPI_Comm_attach_buffer_c(MPI_Comm comm, void *buffer, MPI_Count size) { retu
 int MPI_Comm_attach_buffer(MPI_Comm comm, void *buffer, int size) { return MPI_SUCCESS; }
 int MPI_Comm_detach_buffer_c(MPI_Comm comm, void *buffer_addr, MPI_Count *size) { if(size) *size=0; return MPI_SUCCESS; }
 int MPI_Comm_detach_buffer(MPI_Comm comm, void *buffer_addr, int *size) { if(size) *size=0; return MPI_SUCCESS; }
+
+/* --- Missing Session Buffer Management (MPI-4.0+) --- */
+int MPI_Session_attach_buffer_c(MPI_Session session, void *buffer, MPI_Count size) { 
+    return MPI_SUCCESS; 
+}
+int MPI_Session_attach_buffer(MPI_Session session, void *buffer, int size) { 
+    return MPI_SUCCESS; 
+}
+int MPI_Session_detach_buffer_c(MPI_Session session, void *buffer_addr, MPI_Count *size) { 
+    if(size) *size = 0; 
+    return MPI_SUCCESS; 
+}
+int MPI_Session_detach_buffer(MPI_Session session, void *buffer_addr, int *size) { 
+    if(size) *size = 0; 
+    return MPI_SUCCESS; 
+}
+int MPI_Session_flush_buffer(MPI_Session session) { 
+    return MPI_SUCCESS; 
+}
+int MPI_Session_iflush_buffer(MPI_Session session, MPI_Request *request) { 
+    /* Use the dummy request ID from our previous fix so Waitany doesn't panic */
+    if(request) *request = (MPI_Request)(intptr_t)DUMMY_REQUEST_ID; 
+    return MPI_SUCCESS; 
+}
+
 int MPI_Comm_flush_buffer(MPI_Comm comm) { return MPI_SUCCESS; }
 int MPI_Comm_iflush_buffer(MPI_Comm comm, MPI_Request *request) { if(request) *request=(MPI_Request)(intptr_t)DUMMY_REQUEST_ID; return MPI_SUCCESS; }
 
@@ -1886,6 +1911,24 @@ int MPI_Type_hindexed(int count, int array_of_blocklengths[], MPI_Aint array_of_
 
 MPI_Aint MPI_Aint_add(MPI_Aint base, MPI_Aint disp) { return base + disp; }
 MPI_Aint MPI_Aint_diff(MPI_Aint addr1, MPI_Aint addr2) { return addr1 - addr2; }
+
+/* --- Missing Persistent P2P Requests (MPI-4.0) --- */
+
+int MPI_Ssend_init(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { 
+    return MPI_Send_init(buf, count, datatype, dest, tag, comm, request); 
+}
+
+int MPI_Ssend_init_c(const void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { 
+    return MPI_Send_init(buf, (int)count, datatype, dest, tag, comm, request); 
+}
+
+int MPI_Rsend_init(const void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { 
+    return MPI_Send_init(buf, count, datatype, dest, tag, comm, request); 
+}
+
+int MPI_Rsend_init_c(const void *buf, MPI_Count count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request) { 
+    return MPI_Send_init(buf, (int)count, datatype, dest, tag, comm, request); 
+}
 
 /* =========================================================================
  * Core Fortran Interceptors (Crucial for Linker Resolution)
