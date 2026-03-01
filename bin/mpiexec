@@ -1,0 +1,10 @@
+#!/bin/sh
+# Safely strip out MPI arguments so the serial binary executes normally.
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -n|-np) shift 2 ;;
+    -*) shift 1 ;;
+    *) break ;;
+  esac
+done
+exec "$@"
