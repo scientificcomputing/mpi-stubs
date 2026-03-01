@@ -3,3 +3,16 @@ build
 Dockerfile
 .gitignore
 *.log
+.DS_Store
+bash.sh
+hdf5.sh
+kahip.sh
+main.py
+mpi4py.sh
+pyproject.toml
+python/
+run.sh
+sleps.sh
+third_party/
+venv/
+.github

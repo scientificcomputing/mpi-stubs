@@ -12,7 +12,7 @@ ARG SPDLOG_VERSION=1.16.0
 
 # Compiler optimisation flags for SLEPc and PETSc.
 ARG PETSC_SLEPC_OPTFLAGS="-O2"
-ARG PETSC_SLEPC_DEBUGGING="no"
+ARG PETSC_SLEPC_DEBUGGING="yes"
 ARG BUILD_NP=4
 
 WORKDIR /tmp
@@ -150,7 +150,9 @@ RUN git clone --depth=1 -b v${SLEPC_VERSION} https://gitlab.com/slepc/slepc.git 
 
 
 # --- 7. FEniCSx Toolchain (Basix, UFL, FFCx) ---
-ARG DOLFINX_CMAKE_BUILD_TYPE="Release"
+# ARG DOLFINX_CMAKE_BUILD_TYPE="Release"
+ARG DOLFINX_CMAKE_BUILD_TYPE="Developer"
+ENV PETSC_ARCH=linux-gnu-real64-32
 
 RUN git clone https://github.com/FEniCS/basix.git /tmp/basix && \
     cd /tmp/basix/cpp && \
@@ -172,19 +174,28 @@ RUN git clone https://github.com/FEniCS/ufl.git /tmp/ufl && \
 RUN git clone https://github.com/FEniCS/dolfinx.git /dolfinx
 # We explicitly override FindMPI variables so CMake doesn't try to invoke `mpicc --showme`
 RUN cd /dolfinx/cpp && \
-    cmake -G Ninja -DCMAKE_INSTALL_PREFIX=/usr/local \
+    PETSC_ARCH=linux-gnu-real64-32 cmake -G Ninja -DCMAKE_INSTALL_PREFIX=/usr/local/dolfinx-real \
           -DCMAKE_BUILD_TYPE=${DOLFINX_CMAKE_BUILD_TYPE} \
           -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx \
           -DPETSC_DIR=/usr/local/petsc \
-          -DPETSC_ARCH=linux-gnu-real64-32 \
+          -DDOLFINX_ENABLE_PETSC=ON -DDOLFINX_ENABLE_SLEPC=ON -DDOLFINX_ENABLE_SCOTCH=ON -DDOLFINX_ENABLE_KAHIP=ON -DDOLFINX_ENABLE_ADIOS2=ON \
           -B build-dir -S . && \
     cmake --build build-dir -j ${BUILD_NP} && \
     cmake --install build-dir && \
     cd ../python && \
-    CC=mpicc CXX=mpicxx pip install \
+    pip install --no-cache-dir scikit-build-core && \
+    python -m scikit_build_core.build requires | python -c "import sys, json; print(' '.join(json.load(sys.stdin)))" | xargs pip install --no-cache-dir && \
+    PETSC_ARCH=linux-gnu-real64-32 CC=mpicc CXX=mpicxx pip install \
         --config-settings=cmake.define.CMAKE_C_COMPILER=mpicc \
         --config-settings=cmake.define.CMAKE_CXX_COMPILER=mpicxx \
-        --no-cache-dir . && \
+        --config-settings=cmake.build-type="${DOLFINX_CMAKE_BUILD_TYPE}" --config-settings=install.strip=false --no-build-isolation --check-build-dependencies \
+        --target /usr/local/dolfinx-real/lib/python${PYTHON_VERSION}/dist-packages --no-dependencies --no-cache-dir '.' && \
     rm -rf /dolfinx/cpp/build-dir
+
+ENV PKG_CONFIG_PATH=/usr/local/dolfinx-real/lib/pkgconfig:$PKG_CONFIG_PATH \
+    CMAKE_PREFIX_PATH=/usr/local/dolfinx-real/lib/cmake:$CMAKE_PREFIX_PATH \
+    PETSC_ARCH=linux-gnu-real64-32 \
+    PYTHONPATH=/usr/local/dolfinx-real/lib/python${PYTHON_VERSION}/dist-packages:$PYTHONPATH \
+    LD_LIBRARY_PATH=/usr/local/dolfinx-real/lib:$LD_LIBRARY_PATH
 
 WORKDIR /root

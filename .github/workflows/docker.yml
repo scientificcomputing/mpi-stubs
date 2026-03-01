@@ -64,7 +64,6 @@ jobs:
       with:
         context: .
         file: ./Dockerfile
-        target: dolfinx
         platforms: linux/amd64
         load: true
         tags: local-test-image:latest

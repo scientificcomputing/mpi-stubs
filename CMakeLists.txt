@@ -37,18 +37,16 @@ include(GNUInstallDirs)
 
 # Notice "$@" is placed BEFORE the linker flags (-L and -lmpi)
 set(WRAPPER_SCRIPT_C "#!/bin/sh\nexec \"${CMAKE_C_COMPILER}\" -I\"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}\" \"$@\" -L\"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\" -Wl,-rpath,\"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\" -lmpi\n")
-
 set(WRAPPER_SCRIPT_CXX "#!/bin/sh\nexec \"${CMAKE_CXX_COMPILER}\" -I\"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}\" \"$@\" -L\"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\" -Wl,-rpath,\"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\" -lmpi\n")
-
 set(WRAPPER_SCRIPT_FC "#!/bin/sh\nexec gfortran -I\"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}\" \"$@\" -L\"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\" -Wl,-rpath,\"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\" -lmpi\n")
+# Copy the physical mpiexec script and FORCE Unix line endings (LF) to prevent Bash syntax errors
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/bin/mpiexec ${CMAKE_CURRENT_BINARY_DIR}/mpiexec NEWLINE_STYLE LF)
 
-# Safely strip out -n / -np arguments so the serial binary executes normally
-set(WRAPPER_SCRIPT_EXEC "#!/bin/sh\nwhile [ $# -gt 0 ]; do\n  case \"$1\" in\n    -n|-np) shift 2 ;;\n    *) break ;;\n  esac\ndone\nexec \"$@\"\n")
 
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/mpicc ${WRAPPER_SCRIPT_C})
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/mpicxx ${WRAPPER_SCRIPT_CXX})
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/mpif90 ${WRAPPER_SCRIPT_FC})
-file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/mpiexec ${WRAPPER_SCRIPT_EXEC})
+
 
 # Ensure the generated scripts are executable
 file(CHMOD ${CMAKE_CURRENT_BINARY_DIR}/mpicc PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
