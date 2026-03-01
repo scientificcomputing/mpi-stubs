@@ -35,12 +35,16 @@ include(GNUInstallDirs)
 # WRAPPER GENERATION
 # ==============================================================================
 
-# Notice "$@" is placed BEFORE the linker flags (-L and -lmpi)
-set(WRAPPER_SCRIPT_C "#!/bin/sh\nexec \"${CMAKE_C_COMPILER}\" -I\"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}\" \"$@\" -L\"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\" -Wl,-rpath,\"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\" -lmpi\n")
-set(WRAPPER_SCRIPT_CXX "#!/bin/sh\nexec \"${CMAKE_CXX_COMPILER}\" -I\"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}\" \"$@\" -L\"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\" -Wl,-rpath,\"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\" -lmpi\n")
-set(WRAPPER_SCRIPT_FC "#!/bin/sh\nexec gfortran -I\"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}\" \"$@\" -L\"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\" -Wl,-rpath,\"${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}\" -lmpi\n")
-# Copy the physical mpiexec script and FORCE Unix line endings (LF) to prevent Bash syntax errors
+# Use $0 to resolve the base directory at runtime so scripts are relocatable in Python wheels
+set(SCRIPT_BASE "#!/bin/sh\nDIR=\"$( cd \"$( dirname \"$0\" )/..\" && pwd )\"\n")
+
+set(WRAPPER_SCRIPT_C "${SCRIPT_BASE}exec \"${CMAKE_C_COMPILER}\" -I\"$DIR/${CMAKE_INSTALL_INCLUDEDIR}\" \"$@\" -L\"$DIR/${CMAKE_INSTALL_LIBDIR}\" -Wl,-rpath,\"$DIR/${CMAKE_INSTALL_LIBDIR}\" -lmpi\n")
+set(WRAPPER_SCRIPT_CXX "${SCRIPT_BASE}exec \"${CMAKE_CXX_COMPILER}\" -I\"$DIR/${CMAKE_INSTALL_INCLUDEDIR}\" \"$@\" -L\"$DIR/${CMAKE_INSTALL_LIBDIR}\" -Wl,-rpath,\"$DIR/${CMAKE_INSTALL_LIBDIR}\" -lmpi\n")
+set(WRAPPER_SCRIPT_FC "${SCRIPT_BASE}exec gfortran -I\"$DIR/${CMAKE_INSTALL_INCLUDEDIR}\" \"$@\" -L\"$DIR/${CMAKE_INSTALL_LIBDIR}\" -Wl,-rpath,\"$DIR/${CMAKE_INSTALL_LIBDIR}\" -lmpi\n")
+
+# Copy the physical mpiexec script and FORCE Unix line endings (LF)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/bin/mpiexec ${CMAKE_CURRENT_BINARY_DIR}/mpiexec NEWLINE_STYLE LF)
+
 
 
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/mpicc ${WRAPPER_SCRIPT_C})

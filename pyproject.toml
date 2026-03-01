@@ -1,0 +1,32 @@
+[build-system]
+requires = ["scikit-build-core>=0.10"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "mpi-stubs"
+version = "0.1.0"
+authors = [
+  { name = "Henrik Finsberg", email = "henriknf@simula.no" },
+  { name = "Jørgen Dokken", email = "jorgend@simula.no" },
+]
+description = "ABI-compliant MPI stubs for building MPI applications in serial."
+readme = "README.md"  # Ensure you have a README.md or change this
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: C",
+    "Programming Language :: Fortran",
+    "License :: OSI Approved :: MIT License",
+]
+
+[project.scripts]
+mpicc = "mpi_stubs:mpicc"
+mpicxx = "mpi_stubs:mpicxx"
+mpif90 = "mpi_stubs:mpif90"
+mpiexec = "mpi_stubs:mpiexec"
+
+[tool.scikit-build]
+# Include the Python wrapper module
+wheel.packages = ["python/mpi_stubs"]
+# Tell CMake to install its artifacts into an inner 'data' folder
+wheel.install-dir = "mpi_stubs/data"

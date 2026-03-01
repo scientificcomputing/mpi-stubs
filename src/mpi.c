@@ -76,10 +76,10 @@ typedef struct {
     const int *sdispls_i;
     const int *recvcounts_i;
     const int *rdispls_i;
-    const MPI_Count *sendcounts_c; /* NEW */
-    const MPI_Count *sdispls_c;    /* NEW */
-    const MPI_Count *recvcounts_c; /* NEW */
-    const MPI_Count *rdispls_c;    /* NEW */
+    const MPI_Count *sendcounts_c; 
+    const MPI_Aint  *sdispls_c;   
+    const MPI_Count *recvcounts_c; 
+    const MPI_Aint  *rdispls_c;  
     MPI_Request p2p_req;
 } PersistReq;
 
@@ -680,7 +680,7 @@ int MPI_Type_create_resized_c(MPI_Datatype oldtype, MPI_Count lb, MPI_Count exte
 }
 int MPI_Type_create_resized(MPI_Datatype oldtype, MPI_Aint lb, MPI_Aint extent, MPI_Datatype *newtype) { return MPI_Type_create_resized_c(oldtype, lb, extent, newtype); }
 
-int MPI_Type_create_struct_c(MPI_Count count, const MPI_Count array_of_blocklengths[], const MPI_Aint array_of_displacements[], const MPI_Datatype array_of_types[], MPI_Datatype *newtype) { 
+int MPI_Type_create_struct_c(MPI_Count count, const MPI_Count array_of_blocklengths[], const MPI_Count array_of_displacements[], const MPI_Datatype array_of_types[], MPI_Datatype *newtype) {
     if(newtype) { 
         int id = next_type_id++; *newtype = (MPI_Datatype)(intptr_t)id; 
         MPI_Aint min_lb = 0, max_ub = 0; int has_lb = 0, has_ub = 0;
