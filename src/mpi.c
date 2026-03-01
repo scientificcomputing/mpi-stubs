@@ -1238,12 +1238,58 @@ int MPI_Graph_create(MPI_Comm comm_old, int nnodes, const int index[], const int
     if(comm_graph) *comm_graph=(MPI_Comm)(intptr_t)cid; 
     return MPI_SUCCESS; 
 }
-int MPI_Dist_graph_neighbors_count(MPI_Comm comm, int *indegree, int *outdegree, int *weighted) { if(indegree) *indegree=0; if(outdegree) *outdegree=0; if(weighted) *weighted=0; return MPI_SUCCESS; }
-int MPI_Dist_graph_neighbors(MPI_Comm comm, int maxindegree, int sources[], int sourceweights[], int maxoutdegree, int destinations[], int destweights[]) { return MPI_SUCCESS; }
+int MPI_Dist_graph_neighbors_count(MPI_Comm comm, int *indegree, int *outdegree, int *weighted) { 
+    int cid = (int)(intptr_t)comm;
+    int deg = 0;
+    if(cid >= 0 && cid < MAX_COMM_IDS) {
+        deg = comm_degrees[cid];
+    }
+    if(indegree) *indegree = deg; 
+    if(outdegree) *outdegree = deg; 
+    if(weighted) *weighted = 0; 
+    return MPI_SUCCESS; 
+}
+
+int MPI_Dist_graph_neighbors(MPI_Comm comm, int maxindegree, int sources[], int sourceweights[], int maxoutdegree, int destinations[], int destweights[]) { 
+    int cid = (int)(intptr_t)comm;
+    int deg = 0;
+    if(cid >= 0 && cid < MAX_COMM_IDS) {
+        deg = comm_degrees[cid];
+    }
+    // In serial, the only valid rank is 0. 
+    // Fill the arrays up to the known graph degree.
+    for(int i = 0; i < maxindegree && i < deg; i++) {
+        sources[i] = 0;
+        if(sourceweights && sourceweights != MPI_UNWEIGHTED) sourceweights[i] = 1;
+    }
+    for(int i = 0; i < maxoutdegree && i < deg; i++) {
+        destinations[i] = 0;
+        if(destweights && destweights != MPI_UNWEIGHTED) destweights[i] = 1;
+    }
+    return MPI_SUCCESS; 
+}
+
+int MPI_Graph_neighbors_count(MPI_Comm comm, int rank, int *nneighbors) { 
+    int cid = (int)(intptr_t)comm;
+    if(nneighbors) {
+        *nneighbors = (cid >= 0 && cid < MAX_COMM_IDS) ? comm_degrees[cid] : 0; 
+    }
+    return MPI_SUCCESS; 
+}
+
+int MPI_Graph_neighbors(MPI_Comm comm, int rank, int maxneighbors, int neighbors[]) { 
+    int cid = (int)(intptr_t)comm;
+    int deg = 0;
+    if(cid >= 0 && cid < MAX_COMM_IDS) {
+        deg = comm_degrees[cid];
+    }
+    for(int i = 0; i < maxneighbors && i < deg; i++) {
+        if(neighbors) neighbors[i] = 0;
+    }
+    return MPI_SUCCESS; 
+}
 int MPI_Graph_get(MPI_Comm comm, int maxindex, int maxedges, int index[], int edges[]) { return MPI_SUCCESS; }
 int MPI_Graph_map(MPI_Comm comm, int nnodes, const int index[], const int edges[], int *newrank) { if(newrank) *newrank=0; return MPI_SUCCESS; }
-int MPI_Graph_neighbors_count(MPI_Comm comm, int rank, int *nneighbors) { if(nneighbors) *nneighbors=0; return MPI_SUCCESS; }
-int MPI_Graph_neighbors(MPI_Comm comm, int rank, int maxneighbors, int neighbors[]) { return MPI_SUCCESS; }
 int MPI_Graphdims_get(MPI_Comm comm, int *nnodes, int *nedges) { if(nnodes) *nnodes=0; if(nedges) *nedges=0; return MPI_SUCCESS; }
 
 
@@ -1271,9 +1317,19 @@ int MPI_Neighbor_alltoall_c(const void *sendbuf, MPI_Count sendcount, MPI_Dataty
 }
 int MPI_Neighbor_alltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, MPI_Comm comm) { return MPI_Neighbor_alltoall_c(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, comm); }
 int MPI_Neighbor_alltoallv_c(const void *sendbuf, const MPI_Count sendcounts[], const MPI_Aint sdispls[], MPI_Datatype sendtype, void *recvbuf, const MPI_Count recvcounts[], const MPI_Aint rdispls[], MPI_Datatype recvtype, MPI_Comm comm) {
-    if(sendbuf == MPI_IN_PLACE) return MPI_SUCCESS;
-    int degree = 0; int cid = (int)(intptr_t)comm; if(cid >= 0 && cid < MAX_COMM_IDS) degree = comm_degrees[cid];
-    for(int i=0; i<degree; i++) safe_memcpy((char*)recvbuf + rdispls[i]*get_type_size(recvtype), (const char*)sendbuf + sdispls[i]*get_type_size(sendtype), recvcounts[i]*get_type_size(recvtype));
+    if (sendbuf == MPI_IN_PLACE || !sendbuf || !recvbuf) return MPI_SUCCESS;
+    int degree = 0; 
+    int cid = (int)(intptr_t)comm; 
+    if (cid >= 0 && cid < MAX_COMM_IDS) degree = comm_degrees[cid];
+    
+    size_t stype_sz = get_type_size(sendtype);
+    size_t rtype_sz = get_type_size(recvtype);
+
+    for (int i = 0; i < degree; i++) {
+        safe_memcpy((char*)recvbuf + rdispls[i] * rtype_sz, 
+                    (const char*)sendbuf + sdispls[i] * stype_sz, 
+                    recvcounts[i] * rtype_sz);
+    }
     return MPI_SUCCESS;
 }
 int MPI_Neighbor_alltoallv(const void *sendbuf, const int sendcounts[], const int sdispls[], MPI_Datatype sendtype, void *recvbuf, const int recvcounts[], const int rdispls[], MPI_Datatype recvtype, MPI_Comm comm) {
