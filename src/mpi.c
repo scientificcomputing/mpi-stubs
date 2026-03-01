@@ -301,9 +301,27 @@ int MPI_Iscatterv(const void *sendbuf, const int sendcounts[], const int displs[
 int MPI_Ireduce_scatter_block_c(const void *sendbuf, void *recvbuf, MPI_Count recvcount, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
 int MPI_Ireduce_scatter_block(const void *sendbuf, void *recvbuf, int recvcount, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm, MPI_Request *request) { if(request) *request=MPI_REQUEST_NULL; return MPI_SUCCESS; }
 int MPI_Op_create(MPI_User_function *user_fn, int commute, MPI_Op *op) { if(op) *op=(MPI_Op)(intptr_t)next_op_id++; return MPI_SUCCESS; }
+int MPI_Op_commutative(MPI_Op op, int *commute) { 
+    if(commute) *commute = 1; 
+    return MPI_SUCCESS; 
+}
+
+int MPI_Op_create_c(MPI_User_function_c *user_fn, int commute, MPI_Op *op) { 
+    if(op) *op = (MPI_Op)(intptr_t)next_op_id++; 
+    return MPI_SUCCESS; 
+}
 int MPI_Op_free(MPI_Op *op) { if(op) *op=MPI_OP_NULL; return MPI_SUCCESS; }
 int MPI_Reduce_c(const void *sendbuf, void *recvbuf, MPI_Count count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm) { if(sendbuf!=MPI_IN_PLACE && sendbuf!=recvbuf) memcpy(recvbuf, sendbuf, count*get_type_size(datatype)); return MPI_SUCCESS; }
 int MPI_Reduce(const void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm) { if(sendbuf!=MPI_IN_PLACE && sendbuf!=recvbuf) memcpy(recvbuf, sendbuf, count*get_type_size(datatype)); return MPI_SUCCESS; }
+int MPI_Reduce_init_c(const void *sendbuf, void *recvbuf, MPI_Count count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm, MPI_Info info, MPI_Request *request) { 
+    if(request) *request=MPI_REQUEST_NULL; 
+    return MPI_SUCCESS; 
+}
+
+int MPI_Reduce_init(const void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm, MPI_Info info, MPI_Request *request) { 
+    if(request) *request=MPI_REQUEST_NULL; 
+    return MPI_SUCCESS; 
+}
 int MPI_Reduce_local_c(const void *inbuf, void *inoutbuf, MPI_Count count, MPI_Datatype datatype, MPI_Op op) { return MPI_SUCCESS; }
 int MPI_Reduce_local(const void *inbuf, void *inoutbuf, int count, MPI_Datatype datatype, MPI_Op op) { return MPI_SUCCESS; }
 int MPI_Reduce_scatter_block_c(const void *sendbuf, void *recvbuf, MPI_Count recvcount, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm) { if(sendbuf!=MPI_IN_PLACE && sendbuf!=recvbuf) memcpy(recvbuf, sendbuf, recvcount*get_type_size(datatype)); return MPI_SUCCESS; }
@@ -561,6 +579,10 @@ int MPI_Errhandler_free(MPI_Errhandler *errhandler) { if(errhandler) *errhandler
 int MPI_Errhandler_set(MPI_Comm comm, MPI_Errhandler errhandler) { return MPI_SUCCESS; }
 int MPI_Error_class(int errorcode, int *errorclass) { if(errorclass) *errorclass=errorcode; return MPI_SUCCESS; }
 int MPI_Error_string(int errorcode, char *string, int *resultlen) { const char *msg="MPI_STUB_ERROR"; if(string) strncpy(string, msg, MPI_MAX_ERROR_STRING); if(resultlen) *resultlen=strlen(msg); return MPI_SUCCESS; }
+int MPI_File_call_errhandler(MPI_File fh, int errorcode) { return MPI_SUCCESS; }
+int MPI_File_create_errhandler(MPI_File_errhandler_function *file_errhandler_fn, MPI_Errhandler *errhandler) { if(errhandler) *errhandler=(MPI_Errhandler)(intptr_t)next_errhandler++; return MPI_SUCCESS; }
+int MPI_File_get_errhandler(MPI_File file, MPI_Errhandler *errhandler) { if(errhandler) *errhandler=MPI_ERRHANDLER_NULL; return MPI_SUCCESS; }
+int MPI_File_set_errhandler(MPI_File file, MPI_Errhandler errhandler) { return MPI_SUCCESS; }
 int MPI_Free_mem(void *base) { free(base); return MPI_SUCCESS; }
 int MPI_Get_hw_resource_info(MPI_Info *hw_info) { if(hw_info) *hw_info=MPI_INFO_NULL; return MPI_SUCCESS; }
 int MPI_Get_library_version(char *version, int *resultlen) { const char *ver="MPI Stub 1.0"; if(version) strncpy(version, ver, MPI_MAX_LIBRARY_VERSION_STRING); if(resultlen) *resultlen=strlen(ver); return MPI_SUCCESS; }
@@ -586,6 +608,7 @@ int MPI_Finalize(void) { return MPI_SUCCESS; }
 int MPI_Finalized(int *flag) { if(flag) *flag=0; return MPI_SUCCESS; }
 double MPI_Wtime(void) { struct timeval tv; gettimeofday(&tv, NULL); return (double)tv.tv_sec + (double)tv.tv_usec / 1000000.0; }
 double MPI_Wtick(void) { return 0.000001; }
+
 
 /* --- A.3.8 The Info Object --- */
 int MPI_Info_create(MPI_Info *info) { if(info) *info=(MPI_Info)(intptr_t)next_info_id++; return MPI_SUCCESS; }
@@ -934,6 +957,11 @@ int MPI_Keyval_free(int *keyval) { if(keyval) *keyval=MPI_KEYVAL_INVALID; return
 int MPI_Status_set_elements_x(MPI_Status *status, MPI_Datatype datatype, MPI_Count count) { set_status_count(status, count); return MPI_SUCCESS; }
 int MPI_Type_get_extent_x(MPI_Datatype datatype, MPI_Count *lb, MPI_Count *extent) { if(lb) *lb=0; if(extent) *extent=get_type_size(datatype); return MPI_SUCCESS; }
 int MPI_Type_get_true_extent_x(MPI_Datatype datatype, MPI_Count *true_lb, MPI_Count *true_extent) { return MPI_Type_get_extent_x(datatype, true_lb, true_extent); }
+int MPI_Type_get_value_index(MPI_Datatype datatype, MPI_Datatype *value_type, MPI_Datatype *index_type) {
+    if(value_type) *value_type = MPI_DATATYPE_NULL;
+    if(index_type) *index_type = MPI_DATATYPE_NULL;
+    return MPI_SUCCESS;
+}
 int MPI_Type_size_x(MPI_Datatype datatype, MPI_Count *size) { if(size) *size=get_type_size(datatype); return MPI_SUCCESS; }
 
 /* Legacy MPI-1 Aliases for SuperLU_DIST and MUMPS */

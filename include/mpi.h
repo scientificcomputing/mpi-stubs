@@ -61,6 +61,12 @@ typedef int64_t  MPI_Offset;
 typedef int64_t  MPI_Count;
 typedef int      MPI_Fint;
 
+
+#define MPI_F_STATUS_SIZE 8
+#define MPI_F_SOURCE      1
+#define MPI_F_TAG         2
+#define MPI_F_ERROR       3
+
 /* =========================================================================
  * APPENDIX A.1: DEFINED VALUES AND HANDLES
  * ========================================================================= */
@@ -438,7 +444,7 @@ typedef int MPI_Type_delete_attr_function(MPI_Datatype datatype, int type_keyval
 typedef void MPI_Comm_errhandler_function(MPI_Comm *comm, int *error_code, ...);
 typedef void MPI_Win_errhandler_function(MPI_Win *win, int *error_code, ...);
 typedef void MPI_File_errhandler_function(MPI_File *file, int *error_code, ...);
-typedef void MPI_Session_errhandler_function(MPI_Session session, int *error_code, ...);
+typedef void MPI_Session_errhandler_function(MPI_Session *session, int *error_code, ...);
 typedef int MPI_Grequest_query_function(void *extra_state, MPI_Status *status);
 typedef int MPI_Grequest_free_function(void *extra_state);
 typedef int MPI_Grequest_cancel_function(void *extra_state, int complete);
@@ -613,6 +619,7 @@ int MPI_Type_get_extent_c(MPI_Datatype datatype, MPI_Count *lb, MPI_Count *exten
 int MPI_Type_get_extent(MPI_Datatype datatype, MPI_Aint *lb, MPI_Aint *extent);
 int MPI_Type_get_true_extent_c(MPI_Datatype datatype, MPI_Count *true_lb, MPI_Count *true_extent);
 int MPI_Type_get_true_extent(MPI_Datatype datatype, MPI_Aint *true_lb, MPI_Aint *true_extent);
+int MPI_Type_get_value_index(MPI_Datatype datatype, MPI_Datatype *value_type, MPI_Datatype *index_type);
 int MPI_Type_indexed_c(MPI_Count count, const MPI_Count array_of_blocklengths[], const MPI_Count array_of_displacements[], MPI_Datatype oldtype, MPI_Datatype *newtype);
 int MPI_Type_indexed(int count, const int array_of_blocklengths[], const int array_of_displacements[], MPI_Datatype oldtype, MPI_Datatype *newtype);
 int MPI_Type_size_c(MPI_Datatype datatype, MPI_Count *size);

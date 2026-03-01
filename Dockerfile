@@ -57,7 +57,7 @@ RUN python3 -m venv ${VIRTUAL_ENV} && \
 
 # Install mpi4py against our stub
 RUN env MPICC="${STUBS_DIR}/bin/mpicc" \
-    pip install --no-cache-dir --no-build-isolation mpi4py
+    pip install --no-cache-dir --no-build-isolation --no-binary mpi4py mpi4py
 
 # --- 4. System Libraries (Spdlog, Doxygen, KaHIP, HDF5, ADIOS2, GMSH) ---
 RUN wget -nc --quiet https://github.com/gabime/spdlog/archive/refs/tags/v${SPDLOG_VERSION}.tar.gz && \

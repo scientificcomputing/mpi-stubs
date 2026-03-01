@@ -1,34 +1,92 @@
-name: Docker Build & FEniCSx Verification
+name: Docker Build & Publish
 
 on:
   push:
     branches: [ "main" ]
+    # Also trigger on semver tags, e.g., v1.0.0, v2.1.3
+    tags: [ 'v*.*.*' ]
   pull_request:
     branches: [ "main" ]
 
+env:
+  REGISTRY: ghcr.io
+  # This sets the image name to ghcr.io/YOUR_GITHUB_USERNAME/dolfinx-serial
+  IMAGE_NAME: ${{ github.repository_owner }}/dolfinx-serial
+
 jobs:
-  docker-build-verify:
-    name: Build Docker Image and Test Import
+  build-test-push:
+    name: Build, Test, and Push
     runs-on: ubuntu-24.04
+    
+    # We need 'packages: write' permission to push the image to GitHub Packages
+    permissions:
+      contents: read
+      packages: write
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Set up QEMU (for ARM64 build)
+      uses: docker/setup-qemu-action@v3
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Build Docker Image
+    - name: Log in to the Container registry
+      # Only log in if this is a push to main or a tag (skip for PRs)
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          # Output 'main' or 'latest' on push to main
+          type=ref,event=branch
+          type=edge,branch=main
+          # Output '1.2.3' if you push a tag 'v1.2.3'
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          # Output PR number on pull requests
+          type=ref,event=pr
+
+    # --- Phase 1: Test ---
+    # We build a local AMD64 image because multi-arch images cannot be loaded locally.
+    - name: Build local image for verification
       uses: docker/build-push-action@v5
       with:
         context: .
         file: ./Dockerfile
         target: dolfinx
-        tags: dolfinx-serial:latest
-        load: true # Required to load the image into the local runner so we can run it in the next step
+        platforms: linux/amd64
+        load: true
+        tags: local-test-image:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
     - name: Verify DOLFINx Import
       run: |
-        docker run --rm dolfinx-serial:latest python3 -c "import dolfinx; print(f'SUCCESS! DOLFINx imported cleanly. Version: {dolfinx.__version__}')"
+        docker run --rm local-test-image:latest python3 -c "import dolfinx; print(f'SUCCESS! DOLFINx imported cleanly. Version: {dolfinx.__version__}')"
+
+    # --- Phase 2: Multi-Arch Push ---
+    # Only executes if Phase 1 passes AND it is a push/tag (not a PR)
+    - name: Build and push multi-architecture image
+      if: github.event_name != 'pull_request'
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        target: dolfinx
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
