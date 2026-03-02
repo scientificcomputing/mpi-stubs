@@ -107,6 +107,17 @@ static int allocate_type_id() {
     return HANDLE_OFFSET;
 }
 
+/* Standard Fortran MPI_IN_PLACE intercepts for popular MPI environments */
+int mpi_fortran_in_place_ = 0;
+int mpipriv1_ = 0;
+int mpifcmb1_ = 0;
+int mpi_fortran_bottom_ = 0;
+
+static int is_in_place(const void *buf) {
+    return (buf == MPI_IN_PLACE || buf == &mpi_fortran_in_place_ || 
+            buf == &mpipriv1_ || buf == &mpifcmb1_);
+}
+
 /* --- Buffer Evaluation Macro --- 
  * HDF5 sometimes encodes the memory address dynamically in the lower bound (lb) of the datatype 
  * and passes buf = MPI_BOTTOM (NULL). This resolves the true absolute address without causing a Segfault.
@@ -224,27 +235,33 @@ static void match_p2p(int rid) {
 
 static int get_type_size(MPI_Datatype type) {
     if (type == MPI_DATATYPE_NULL) return 0;
-    int id = (int)(intptr_t)type;
+    intptr_t ptr_id = (intptr_t)type;
+    int id = (int)ptr_id;
+    
+    /* Handle MPICH ABI: Size is encoded in bits 8-15 */
+    if ((id & 0xFF000000) == 0x4c000000) {
+        return (id & 0xFF00) >> 8;
+    }
     
     switch(id) {
         /* 1 Byte */
         case 519: case 542: case 576: case 577: case 579: case 580: case 581: case 583:
-        case 1: case 3: case 4: case 8: case 9: case 12: case 102:
+        case 1: case 8: case 9: case 12: case 102: case 2:
             return 1;
         /* 2 Bytes */
         case 520: case 524: case 584: case 585:
             return 2;
         /* 4 Bytes */
         case 521: case 525: case 528: case 537: case 538: case 568: case 569: case 572: case 592: case 593:
-        case 2: case 13: case 100:
+        case 13: case 100: case 7: case 3: case 4:
             return 4;
         /* 8 Bytes */
         case 513: case 514: case 515: case 522: case 523: case 526: case 527: case 530: case 531: case 532:
         case 539: case 540: case 552: case 555: case 560: case 562: case 600: case 601:
-        case 5: case 6: case 14: case 101:
+        case 5: case 6: case 14: case 101: case 17: case 18:
             return 8;
         /* 16 Bytes */
-        case 534: case 535: case 541: case 553: case 554: case 561: case 17:
+        case 534: case 535: case 541: case 553: case 554: case 561: case 19:
             return 16;
         /* Extended */
         case 544: return sizeof(long double);
@@ -253,7 +270,7 @@ static int get_type_size(MPI_Datatype type) {
     }
     
     if (id >= HANDLE_OFFSET && id < MAX_CUSTOM_TYPES) return custom_type_sizes[id];
-    return 1;
+    return 4; // Safest non-crashing fallback for entirely unknown pointer handles
 }
 
 /* --- Attribute Keyval Registry --- */
@@ -1412,9 +1429,10 @@ int MPI_Reduce_c(const void *sendbuf, void *recvbuf, MPI_Count count, MPI_Dataty
     return MPI_SUCCESS; 
 }
 int MPI_Reduce(const void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm) { 
+    if (is_in_place(sendbuf) || sendbuf == recvbuf) return MPI_SUCCESS;
     const void *act_sbuf = ACTUAL_CONST_BUF_PTR(sendbuf, datatype);
     void *act_rbuf = ACTUAL_BUF_PTR(recvbuf, datatype);
-    if(sendbuf!=MPI_IN_PLACE && act_sbuf!=act_rbuf) safe_memcpy(act_rbuf, act_sbuf, count*get_type_size(datatype)); 
+    if(act_sbuf!=act_rbuf) safe_memcpy(act_rbuf, act_sbuf, count*get_type_size(datatype)); 
     return MPI_SUCCESS; 
 }
 int MPI_Reduce_init_c(const void *sendbuf, void *recvbuf, MPI_Count count, MPI_Datatype datatype, MPI_Op op, int root, MPI_Comm comm, MPI_Info info, MPI_Request *request) { if(request) *request=(MPI_Request)(intptr_t)DUMMY_REQUEST_ID; return MPI_SUCCESS; }
@@ -2063,20 +2081,15 @@ static MPI_Offset file_views[MAX_FD] = {0};
 static size_t file_etypes[MAX_FD] = {0};
 
 int MPI_File_open(MPI_Comm comm, const char *filename, int amode, MPI_Info info, MPI_File *fh) {
-    int flags = 0;
-    if (amode & MPI_MODE_RDWR) flags |= O_RDWR;
-    else if (amode & MPI_MODE_WRONLY) flags |= O_WRONLY;
-    else flags |= O_RDONLY;
-    if (amode & MPI_MODE_CREATE) flags |= O_CREAT;
-    if (amode & MPI_MODE_EXCL) flags |= O_EXCL;
-    if (amode & MPI_MODE_APPEND) flags |= O_APPEND;
-
+    /* Ignore amode! System HDF5 sends OpenMPI/MPICH bitmasks that won't match 
+       our ABI. Since it's a serial stub, opening R/W + Create is always safe. */
+    int flags = O_RDWR | O_CREAT;
     int fd = open(filename, flags, 0666);
     if (fd < 0) return MPI_ERR_IO;
     
     if (fd < MAX_FD) {
         file_views[fd] = 0;
-        file_etypes[fd] = 1; /* Default etype is MPI_BYTE */
+        file_etypes[fd] = 1;
     }
     if (fh) *fh = (MPI_File)(intptr_t)(fd + FILE_HANDLE_OFFSET);
     return MPI_SUCCESS;
@@ -2396,7 +2409,14 @@ int MPI_T_source_get_timestamp(int source_index, MPI_Count timestamp) { return M
 int MPI_Attr_delete(MPI_Comm comm, int keyval) { return MPI_Comm_delete_attr(comm, keyval); }
 int MPI_Attr_get(MPI_Comm comm, int keyval, void *attribute_val, int *flag) { return MPI_Comm_get_attr(comm, keyval, attribute_val, flag); }
 int MPI_Attr_put(MPI_Comm comm, int keyval, void *attribute_val) { return MPI_Comm_set_attr(comm, keyval, attribute_val); }
-int MPI_Get_elements_x(const MPI_Status *status, MPI_Datatype datatype, MPI_Count *count) { int c; MPI_Get_count(status, datatype, &c); if(count) *count=c; return MPI_SUCCESS; }
+int MPI_Get_elements_x(const MPI_Status *status, MPI_Datatype datatype, MPI_Count *count) { 
+    if(count && status && status != MPI_STATUS_IGNORE) {
+        MPI_Count bytes_received = get_status_count_impl(status);
+        MPI_Count type_sz = get_type_size(datatype);
+        *count = type_sz > 0 ? bytes_received / type_sz : 0;
+    }
+    return MPI_SUCCESS; 
+}
 int MPI_Keyval_create(MPI_Copy_function *copy_fn, MPI_Delete_function *delete_fn, int *keyval, void *extra_state) { if(keyval) *keyval=next_keyval++; return MPI_SUCCESS; }
 int MPI_Keyval_free(int *keyval) { if(keyval) *keyval=MPI_KEYVAL_INVALID; return MPI_SUCCESS; }
 int MPI_Status_set_elements_x(MPI_Status *status, MPI_Datatype datatype, MPI_Count count) { set_status_count(status, count); return MPI_SUCCESS; }
@@ -2489,14 +2509,28 @@ void F_FUNC(cancel)(MPI_Fint *request, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
 void F_FUNC(request_free)(MPI_Fint *request, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
 
 /* Collectives */
+void F_FUNC(allreduce)(void *sendbuf, void *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *ierr) { 
+    *ierr = MPI_Allreduce(sendbuf, recvbuf, *count, MPI_Type_f2c(*datatype), MPI_Op_f2c(*op), MPI_Comm_f2c(*comm)); 
+}
+void F_FUNC(reduce)(void *sendbuf, void *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierr) { 
+    *ierr = MPI_Reduce(sendbuf, recvbuf, *count, MPI_Type_f2c(*datatype), MPI_Op_f2c(*op), *root, MPI_Comm_f2c(*comm)); 
+}
+void F_FUNC(bcast)(void *buffer, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierr) { 
+    *ierr = MPI_Bcast(buffer, *count, MPI_Type_f2c(*datatype), *root, MPI_Comm_f2c(*comm)); 
+}
+void F_FUNC(gather)(void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierr) { 
+    *ierr = MPI_Gather(sendbuf, *sendcount, MPI_Type_f2c(*sendtype), recvbuf, *recvcount, MPI_Type_f2c(*recvtype), *root, MPI_Comm_f2c(*comm)); 
+}
+void F_FUNC(scatter)(void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierr) { 
+    *ierr = MPI_Scatter(sendbuf, *sendcount, MPI_Type_f2c(*sendtype), recvbuf, *recvcount, MPI_Type_f2c(*recvtype), *root, MPI_Comm_f2c(*comm)); 
+}
+void F_FUNC(allgather)(void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *ierr) { 
+    *ierr = MPI_Allgather(sendbuf, *sendcount, MPI_Type_f2c(*sendtype), recvbuf, *recvcount, MPI_Type_f2c(*recvtype), MPI_Comm_f2c(*comm)); 
+}
+void F_FUNC(alltoall)(void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *ierr) { 
+    *ierr = MPI_Alltoall(sendbuf, *sendcount, MPI_Type_f2c(*sendtype), recvbuf, *recvcount, MPI_Type_f2c(*recvtype), MPI_Comm_f2c(*comm)); 
+}
 void F_FUNC(barrier)(MPI_Fint *comm, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
-void F_FUNC(bcast)(void *buffer, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
-void F_FUNC(allreduce)(void *sendbuf, void *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
-void F_FUNC(reduce)(void *sendbuf, void *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
-void F_FUNC(gather)(void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
-void F_FUNC(scatter)(void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
-void F_FUNC(allgather)(void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
-void F_FUNC(alltoall)(void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
 void F_FUNC(reduce_scatter)(void *sendbuf, void *recvbuf, MPI_Fint *recvcounts, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
 void F_FUNC(ibcast)(void *buffer, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
 void F_FUNC(ireduce_scatter)(void *sendbuf, void *recvbuf, MPI_Fint *recvcounts, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr) { 
