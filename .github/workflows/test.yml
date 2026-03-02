@@ -46,10 +46,17 @@ jobs:
 
     # --- 4a. Build and Test (Unix: Linux / macOS) ---
     - name: Configure CMake (Unix)
-      if: runner.os != 'Windows'
-      env:
-        FC: gfortran
+      if: matrix.os != 'windows-latest'
       run: |
+        if [ "$RUNNER_OS" == "macOS" ]; then
+          # Dynamically find Homebrew's gfortran (handles gfortran-13, gfortran-14, etc.)
+          export FC=$(ls $(brew --prefix)/bin/gfortran* | sort -V | tail -n 1)
+        else
+          export FC=gfortran
+        fi
+        
+        echo "Using Fortran compiler: $FC"
+        
         cmake -B build -S . \
           -G Ninja \
           -DCMAKE_BUILD_TYPE=Release
