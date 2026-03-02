@@ -47,6 +47,8 @@ jobs:
     # --- 4a. Build and Test (Unix: Linux / macOS) ---
     - name: Configure CMake (Unix)
       if: runner.os != 'Windows'
+      env:
+        FC: gfortran
       run: |
         cmake -B build -S . \
           -G Ninja \

@@ -7,6 +7,34 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+#ifdef _WIN32
+#include <io.h>
+
+/* Map POSIX fsync to Windows _commit */
+#define fsync _commit
+
+/* Map lseek to 64-bit Windows equivalent to prevent 2GB truncation */
+#define lseek _lseeki64
+
+/* Simulate POSIX pread */
+static ssize_t pread(int fd, void *buf, size_t count, MPI_Offset offset) {
+    MPI_Offset current_pos = _lseeki64(fd, 0, SEEK_CUR);
+    _lseeki64(fd, offset, SEEK_SET);
+    ssize_t bytes_read = read(fd, buf, (unsigned int)count);
+    _lseeki64(fd, current_pos, SEEK_SET);
+    return bytes_read;
+}
+
+/* Simulate POSIX pwrite */
+static ssize_t pwrite(int fd, const void *buf, size_t count, MPI_Offset offset) {
+    MPI_Offset current_pos = _lseeki64(fd, 0, SEEK_CUR);
+    _lseeki64(fd, offset, SEEK_SET);
+    ssize_t bytes_written = write(fd, buf, (unsigned int)count);
+    _lseeki64(fd, current_pos, SEEK_SET);
+    return bytes_written;
+}
+#endif
+
 /* =========================================================================
  * Internal Helpers for Status & Memory
  * ========================================================================= */
