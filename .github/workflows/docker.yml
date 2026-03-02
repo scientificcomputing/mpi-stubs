@@ -74,17 +74,12 @@ jobs:
       run: |
         docker run --rm local-test-image:latest python3 -c "import dolfinx; print(f'SUCCESS! DOLFINx imported cleanly. Version: {dolfinx.__version__}')"
 
-    # --- Phase 2: Multi-Arch Push ---
-    # Only executes if Phase 1 passes AND it is a push/tag (not a PR)
-    - name: Build and push multi-architecture image
-      if: github.event_name != 'pull_request'
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile
-        platforms: linux/amd64,linux/arm64
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+    - name: Run DOLFINx C++ Tests
+      run: |
+        docker run --rm local-test-image:latest bash -c "\
+          cd /dolfinx/cpp/test && \
+          rm -rf build && \
+          cmake -B build -S . -DCMAKE_BUILD_TYPE=Developer -GNinja -DCMAKE_C_COMPILER=mpicc -DCMAKE_CXX_COMPILER=mpicxx && \
+          cmake --build build -j 4 && \
+          cd build && \
+          ctest -VV --output-on-failure -R unittests_np_1"
