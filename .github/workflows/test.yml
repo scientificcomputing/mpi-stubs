@@ -21,19 +21,19 @@ jobs:
 
     # --- 1. Linux Dependencies ---
     - name: Install dependencies (Linux)
-      if: runner.os == 'Linux'
+      if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
         sudo apt-get install -y cmake gcc g++ gfortran ninja-build
 
     # --- 2. macOS Dependencies ---
     - name: Install dependencies (macOS)
-      if: runner.os == 'macOS'
+      if: matrix.os == 'macos-latest'
       run: brew install gcc ninja
 
     # --- 3. Windows Dependencies (MSYS2 MinGW) ---
     - name: Setup MSYS2 (Windows)
-      if: runner.os == 'Windows'
+      if: matrix.os == 'windows-latest'
       uses: msys2/setup-msys2@v2
       with:
         msystem: MINGW64
@@ -45,9 +45,8 @@ jobs:
           mingw-w64-x86_64-ninja
 
     # --- 4. Build and Test ---
-    # We use the msys2 shell on Windows to access GCC/gfortran, and standard bash on Linux/macOS
     - name: Configure CMake
-      shell: ${{ runner.os == 'Windows' && 'msys2 {0}' || 'bash' }}
+      shell: ${{ matrix.os == 'windows-latest' && 'msys2 {0}' || 'bash' }}
       run: |
         cmake -B build -S . \
           -G Ninja \
@@ -55,10 +54,10 @@ jobs:
           -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE
 
     - name: Build Stub
-      shell: ${{ runner.os == 'Windows' && 'msys2 {0}' || 'bash' }}
+      shell: ${{ matrix.os == 'windows-latest' && 'msys2 {0}' || 'bash' }}
       run: cmake --build build
 
     - name: Run Tests
       working-directory: build
-      shell: ${{ runner.os == 'Windows' && 'msys2 {0}' || 'bash' }}
+      shell: ${{ matrix.os == 'windows-latest' && 'msys2 {0}' || 'bash' }}
       run: ctest --output-on-failure
