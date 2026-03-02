@@ -21,19 +21,19 @@ jobs:
 
     # --- 1. Linux Dependencies ---
     - name: Install dependencies (Linux)
-      if: matrix.os == 'ubuntu-latest'
+      if: runner.os == 'Linux'
       run: |
         sudo apt-get update
         sudo apt-get install -y cmake gcc g++ gfortran ninja-build
 
     # --- 2. macOS Dependencies ---
     - name: Install dependencies (macOS)
-      if: matrix.os == 'macos-latest'
+      if: runner.os == 'macOS'
       run: brew install gcc ninja
 
     # --- 3. Windows Dependencies (MSYS2 MinGW) ---
     - name: Setup MSYS2 (Windows)
-      if: matrix.os == 'windows-latest'
+      if: runner.os == 'Windows'
       uses: msys2/setup-msys2@v2
       with:
         msystem: MINGW64
@@ -44,20 +44,40 @@ jobs:
           mingw-w64-x86_64-cmake
           mingw-w64-x86_64-ninja
 
-    # --- 4. Build and Test ---
-    - name: Configure CMake
-      shell: ${{ matrix.os == 'windows-latest' && 'msys2 {0}' || 'bash' }}
+    # --- 4a. Build and Test (Unix: Linux / macOS) ---
+    - name: Configure CMake (Unix)
+      if: runner.os != 'Windows'
+      run: |
+        cmake -B build -S . \
+          -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build Stub (Unix)
+      if: runner.os != 'Windows'
+      run: cmake --build build
+
+    - name: Run Tests (Unix)
+      if: runner.os != 'Windows'
+      working-directory: build
+      run: ctest --output-on-failure
+
+    # --- 4b. Build and Test (Windows MSYS2) ---
+    - name: Configure CMake (Windows)
+      if: runner.os == 'Windows'
+      shell: msys2 {0}
       run: |
         cmake -B build -S . \
           -G Ninja \
           -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=TRUE
 
-    - name: Build Stub
-      shell: ${{ matrix.os == 'windows-latest' && 'msys2 {0}' || 'bash' }}
+    - name: Build Stub (Windows)
+      if: runner.os == 'Windows'
+      shell: msys2 {0}
       run: cmake --build build
 
-    - name: Run Tests
+    - name: Run Tests (Windows)
+      if: runner.os == 'Windows'
+      shell: msys2 {0}
       working-directory: build
-      shell: ${{ matrix.os == 'windows-latest' && 'msys2 {0}' || 'bash' }}
       run: ctest --output-on-failure
