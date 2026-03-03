@@ -297,39 +297,6 @@ static void set_status_count(MPI_Status *status, MPI_Count count_in_bytes) {
     }
 }
 
-// static MPI_Count get_status_count_impl(const MPI_Status *status) {
-//     MPI_Count count_in_bytes = 0;
-//     if (status && status != MPI_STATUS_IGNORE) {
-//         safe_memcpy(&count_in_bytes, &status->MPI_internal[0], sizeof(MPI_Count));
-//     }
-//     return count_in_bytes;
-// }
-
-// int MPI_Get_count(const MPI_Status *status, MPI_Datatype datatype, int *count) { 
-//     if(count && status && status != MPI_STATUS_IGNORE) {
-//         MPI_Count bytes_received = get_status_count_impl(status);
-//         MPI_Count type_sz = get_type_size(datatype);
-//         *count = (int)(type_sz > 0 ? bytes_received / type_sz : 0);
-//     }
-//     return MPI_SUCCESS; 
-// }
-
-// int MPI_Get_count_c(const MPI_Status *status, MPI_Datatype datatype, MPI_Count *count) { 
-//     if(count && status && status != MPI_STATUS_IGNORE) {
-//         MPI_Count bytes_received = get_status_count_impl(status);
-//         MPI_Count type_sz = get_type_size(datatype);
-//         *count = type_sz > 0 ? bytes_received / type_sz : 0;
-//     }
-//     return MPI_SUCCESS; 
-// }
-
-// int MPI_Get_elements_c(const MPI_Status *status, MPI_Datatype datatype, MPI_Count *count) { 
-//     return MPI_Get_count_c(status, datatype, count); 
-// }
-// int MPI_Get_elements(const MPI_Status *status, MPI_Datatype datatype, int *count) { 
-//     return MPI_Get_count(status, datatype, count); 
-// }
-
 /* Safely extract 64-bit payload from the status array */
 static MPI_Count get_status_count_impl(const MPI_Status *status) {
     MPI_Count count_in_bytes = 0;
@@ -957,7 +924,7 @@ int MPI_Type_create_hvector_c(MPI_Count count, MPI_Count blocklength, MPI_Count 
         if (id >= HANDLE_OFFSET && id < MAX_CUSTOM_TYPES) {
             custom_type_sizes[id] = count * blocklength * get_type_size(oldtype); 
             custom_type_lbs[id] = get_type_lb(oldtype);
-            /* FIX: Only calculate extent if count AND blocklength are valid */
+            /* Only calculate extent if count AND blocklength are valid */
             custom_type_extents[id] = (count > 0 && blocklength > 0) ? (stride * (count - 1) + blocklength * get_type_extent(oldtype)) : 0;
         }
     } 
@@ -1047,7 +1014,7 @@ int MPI_Type_create_resized_c(MPI_Datatype oldtype, MPI_Count lb, MPI_Count exte
             custom_type_sizes[id] = get_type_size(oldtype); 
             custom_type_lbs[id] = lb; 
             custom_type_extents[id] = extent; 
-            custom_type_true_lbs[id] = get_type_true_lb(oldtype); /* <--- PRESERVE TRUE_LB */
+            custom_type_true_lbs[id] = get_type_true_lb(oldtype); 
         }
     } 
     return MPI_SUCCESS; 
@@ -1058,7 +1025,7 @@ int MPI_Type_create_struct_c(MPI_Count count, const MPI_Count array_of_blockleng
         int id = allocate_type_id(); *newtype = (MPI_Datatype)(intptr_t)id; 
         if (id >= HANDLE_OFFSET && id < MAX_CUSTOM_TYPES) { 
             MPI_Aint min_lb = 0, max_ub = 0; int has_lb = 0, has_ub = 0;
-            MPI_Aint min_true_lb = 0; int has_true = 0; /* <--- ADD THIS */
+            MPI_Aint min_true_lb = 0; int has_true = 0;
             MPI_Count packed_size = 0;
             
             for(int i=0; i<count; i++) {
@@ -1097,7 +1064,7 @@ int MPI_Type_create_struct(int count, const int array_of_blocklengths[], const M
         int id = allocate_type_id(); *newtype = (MPI_Datatype)(intptr_t)id; 
         if (id >= HANDLE_OFFSET && id < MAX_CUSTOM_TYPES) { 
             MPI_Aint min_lb = 0, max_ub = 0; int has_lb = 0, has_ub = 0;
-            MPI_Aint min_true_lb = 0; int has_true = 0; /* <--- ADD THIS */
+            MPI_Aint min_true_lb = 0; int has_true = 0; 
             MPI_Count packed_size = 0;
             
             for(int i=0; i<count; i++) {
@@ -2240,7 +2207,7 @@ int MPI_File_open(MPI_Comm comm, const char *filename, int amode, MPI_Info info,
     if (fd < MAX_FD) {
         file_views[fd] = 0;
         file_etypes[fd] = 1;
-        file_view_lbs[fd] = 0; /* <--- Initialize to 0 */
+        file_view_lbs[fd] = 0; 
     }
     if (fh) *fh = (MPI_File)(intptr_t)(fd + FILE_HANDLE_OFFSET);
     return MPI_SUCCESS;
@@ -2260,7 +2227,7 @@ int MPI_File_delete(const char *filename, MPI_Info info) {
     return MPI_SUCCESS; 
 }
 
-static MPI_Aint file_view_true_lbs[MAX_FD] = {0}; /* <--- Rename / Add this */
+static MPI_Aint file_view_true_lbs[MAX_FD] = {0};
 
 int MPI_File_set_view(MPI_File fh, MPI_Offset disp, MPI_Datatype etype, MPI_Datatype filetype, const char *datarep, MPI_Info info) { 
     int fd = (int)(intptr_t)fh - FILE_HANDLE_OFFSET;
@@ -2268,7 +2235,7 @@ int MPI_File_set_view(MPI_File fh, MPI_Offset disp, MPI_Datatype etype, MPI_Data
         file_views[fd] = disp;
         size_t etsz = get_type_size(etype);
         file_etypes[fd] = etsz > 0 ? etsz : 1;
-        file_view_true_lbs[fd] = get_type_true_lb(filetype); /* <--- Use True LB */
+        file_view_true_lbs[fd] = get_type_true_lb(filetype); 
     }
     lseek(fd, disp + file_view_true_lbs[fd], SEEK_SET);
     return MPI_SUCCESS; 
@@ -2434,8 +2401,6 @@ int MPI_File_get_atomicity(MPI_File fh, int *flag) { if(flag) *flag=0; return MP
 int MPI_File_get_byte_offset(MPI_File fh, MPI_Offset offset, MPI_Offset *disp) { if(disp) *disp=offset; return MPI_SUCCESS; }
 int MPI_File_get_group(MPI_File fh, MPI_Group *group) { if(group) *group=MPI_GROUP_NULL; return MPI_SUCCESS; }
 int MPI_File_get_info(MPI_File fh, MPI_Info *info_used) { if(info_used) *info_used=MPI_INFO_NULL; return MPI_SUCCESS; }
-// int MPI_File_get_type_extent_c(MPI_File fh, MPI_Datatype datatype, MPI_Count *extent) { if(extent) *extent=get_type_size(datatype); return MPI_SUCCESS; }
-// int MPI_File_get_type_extent(MPI_File fh, MPI_Datatype datatype, MPI_Aint *extent) { if(extent) *extent=get_type_size(datatype); return MPI_SUCCESS; }
 int MPI_File_get_view(MPI_File fh, MPI_Offset *disp, MPI_Datatype *etype, MPI_Datatype *filetype, char *datarep) { return MPI_SUCCESS; }
 int MPI_File_preallocate(MPI_File fh, MPI_Offset size) { return MPI_File_set_size(fh, size); }
 int MPI_File_read_all_begin_c(MPI_File fh, void *buf, MPI_Count count, MPI_Datatype datatype) { return MPI_SUCCESS; }
@@ -2630,15 +2595,11 @@ int MPI_Type_size_x(MPI_Datatype datatype, MPI_Count *size) {
 }
 int MPI_Keyval_create(MPI_Copy_function *copy_fn, MPI_Delete_function *delete_fn, int *keyval, void *extra_state) { if(keyval) *keyval=next_keyval++; return MPI_SUCCESS; }
 int MPI_Keyval_free(int *keyval) { if(keyval) *keyval=MPI_KEYVAL_INVALID; return MPI_SUCCESS; }
-// int MPI_Status_set_elements_x(MPI_Status *status, MPI_Datatype datatype, MPI_Count count) { set_status_count(status, count); return MPI_SUCCESS; }
-// int MPI_Type_get_extent_x(MPI_Datatype datatype, MPI_Count *lb, MPI_Count *extent) { if(lb) *lb=0; if(extent) *extent=get_type_size(datatype); return MPI_SUCCESS; }
-// int MPI_Type_get_true_extent_x(MPI_Datatype datatype, MPI_Count *true_lb, MPI_Count *true_extent) { return MPI_Type_get_extent_x(datatype, true_lb, true_extent); }
 int MPI_Type_get_value_index(MPI_Datatype datatype, MPI_Datatype *value_type, MPI_Datatype *index_type) {
     if(value_type) *value_type = MPI_DATATYPE_NULL;
     if(index_type) *index_type = MPI_DATATYPE_NULL;
     return MPI_SUCCESS;
 }
-// int MPI_Type_size_x(MPI_Datatype datatype, MPI_Count *size) { if(size) *size=get_type_size(datatype); return MPI_SUCCESS; }
 
 /* Legacy MPI-1 Aliases for SuperLU_DIST and MUMPS */
 int MPI_Type_struct(int count, const int array_of_blocklengths[], const MPI_Aint array_of_displacements[], const MPI_Datatype array_of_types[], MPI_Datatype *newtype) {
