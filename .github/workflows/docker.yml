@@ -83,3 +83,10 @@ jobs:
           cmake --build build -j 4 && \
           cd build && \
           ctest -VV --output-on-failure -R unittests_np_1"
+
+    - name: Run DOLFINx Python Tests
+      run: |
+        docker run --rm local-test-image:latest bash -c "\
+            python3 -m pip install pytest scipy && \
+            cd /dolfinx/python/test && \
+            python3 -m pytest -vs"
