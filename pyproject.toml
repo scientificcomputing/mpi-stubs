@@ -30,3 +30,25 @@ mpiexec = "mpi_stubs:mpiexec"
 wheel.packages = ["python/mpi_stubs"]
 # Tell CMake to install its artifacts into an inner 'data' folder
 wheel.install-dir = "mpi_stubs/data"
+
+
+# ... (Keep existing pyproject.toml contents) ...
+
+[tool.cibuildwheel]
+# Skip PyPy (unless you specifically want to support it) and Musllinux (to save CI time, add back if needed)
+skip = ["pp*", "*-musllinux*"]
+build-frontend = "build"
+# Run a quick sanity check to ensure the python package imports correctly
+test-command = "python -c \"import mpi_stubs; print('Successfully imported mpi_stubs')\""
+
+[tool.cibuildwheel.linux]
+# manylinux images are CentOS/AlmaLinux based; we need to install gfortran before building
+before-all = "yum install -y gcc-gfortran"
+
+[tool.cibuildwheel.macos]
+# Force scikit-build-core to use the Homebrew gfortran we will install in the workflow
+environment = { FC = "$(ls $(brew --prefix)/bin/gfortran* | sort -V | tail -n 1)" }
+
+[tool.cibuildwheel.windows]
+# Force scikit-build-core to use MSYS2/MinGW toolchain instead of MSVC (which lacks Fortran)
+environment = { CC = "gcc", CXX = "g++", FC = "gfortran", CMAKE_GENERATOR = "MinGW Makefiles", PATH = "C:\\msys64\\mingw64\\bin;%PATH%" }
