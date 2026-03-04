@@ -2427,37 +2427,32 @@ int MPI_Register_datarep_c(const char *datarep, MPI_Datarep_conversion_function_
 int MPI_Register_datarep(const char *datarep, MPI_Datarep_conversion_function *read_conversion_fn, MPI_Datarep_conversion_function *write_conversion_fn, MPI_Datarep_extent_function *dtype_file_extent_fn, void *extra_state) { return MPI_SUCCESS; }
 
 /* --- A.3.13 Language Bindings --- */
-// int MPI_Status_c2f08(const MPI_Status *c_status, MPI_F08_status *f08_status) { if(c_status && f08_status) safe_memcpy(f08_status, c_status, sizeof(MPI_Status)); return MPI_SUCCESS; }
-// int MPI_Status_c2f(const MPI_Status *c_status, MPI_Fint *f_status) { if(c_status && f_status) safe_memcpy(f_status, c_status, sizeof(MPI_Status)); return MPI_SUCCESS; }
-// int MPI_Status_f082c(const MPI_F08_status *f08_status, MPI_Status *c_status) { if(c_status && f08_status) safe_memcpy(c_status, f08_status, sizeof(MPI_Status)); return MPI_SUCCESS; }
-// int MPI_Status_f082f(const MPI_F08_status *f08_status, MPI_Fint *f_status) { if(f_status && f08_status) safe_memcpy(f_status, f08_status, sizeof(MPI_Status)); return MPI_SUCCESS; }
-// int MPI_Status_f2c(const MPI_Fint *f_status, MPI_Status *c_status) { if(c_status && f_status) safe_memcpy(c_status, f_status, sizeof(MPI_Status)); return MPI_SUCCESS; }
-// int MPI_Status_f2f08(const MPI_Fint *f_status, MPI_F08_status *f08_status) { if(f_status && f08_status) safe_memcpy(f08_status, f_status, sizeof(MPI_Status)); return MPI_SUCCESS; }
-// int MPI_Type_create_f90_complex(int p, int r, MPI_Datatype *newtype) { if(newtype) *newtype=MPI_COMPLEX; return MPI_SUCCESS; }
-// int MPI_Type_create_f90_integer(int r, MPI_Datatype *newtype) { if(newtype) *newtype=MPI_INTEGER; return MPI_SUCCESS; }
-// int MPI_Type_create_f90_real(int p, int r, MPI_Datatype *newtype) { if(newtype) *newtype=MPI_REAL; return MPI_SUCCESS; }
+
+int MPI_Type_create_f90_complex(int p, int r, MPI_Datatype *newtype) { if(newtype) *newtype=MPI_COMPLEX; return MPI_SUCCESS; }
+int MPI_Type_create_f90_integer(int r, MPI_Datatype *newtype) { if(newtype) *newtype=MPI_INTEGER; return MPI_SUCCESS; }
+int MPI_Type_create_f90_real(int p, int r, MPI_Datatype *newtype) { if(newtype) *newtype=MPI_REAL; return MPI_SUCCESS; }
 int MPI_Type_match_size(int typeclass, int size, MPI_Datatype *datatype) { if(datatype) *datatype=MPI_DATATYPE_NULL; return MPI_SUCCESS; }
 
-MPI_Comm MPI_Comm_f2c(MPI_Fint comm) { return (MPI_Comm)(intptr_t)comm; }
-MPI_Fint MPI_Comm_c2f(MPI_Comm comm) { return (MPI_Fint)(intptr_t)comm; }
-MPI_Errhandler MPI_Errhandler_f2c(MPI_Fint errhandler) { return (MPI_Errhandler)(intptr_t)errhandler; }
-MPI_Fint MPI_Errhandler_c2f(MPI_Errhandler errhandler) { return (MPI_Fint)(intptr_t)errhandler; }
-MPI_Group MPI_Group_f2c(MPI_Fint group) { return (MPI_Group)(intptr_t)group; }
-MPI_Fint MPI_Group_c2f(MPI_Group group) { return (MPI_Fint)(intptr_t)group; }
-MPI_Info MPI_Info_f2c(MPI_Fint info) { return (MPI_Info)(intptr_t)info; }
-MPI_Fint MPI_Info_c2f(MPI_Info info) { return (MPI_Fint)(intptr_t)info; }
-MPI_Op MPI_Op_f2c(MPI_Fint op) { return (MPI_Op)(intptr_t)op; }
-MPI_Fint MPI_Op_c2f(MPI_Op op) { return (MPI_Fint)(intptr_t)op; }
-MPI_Request MPI_Request_f2c(MPI_Fint request) { return (MPI_Request)(intptr_t)request; }
-MPI_Fint MPI_Request_c2f(MPI_Request request) { return (MPI_Fint)(intptr_t)request; }
-MPI_Datatype MPI_Type_f2c(MPI_Fint datatype) { return (MPI_Datatype)(intptr_t)datatype; }
-MPI_Fint MPI_Type_c2f(MPI_Datatype datatype) { return (MPI_Fint)(intptr_t)datatype; }
-MPI_Win MPI_Win_f2c(MPI_Fint win) { return (MPI_Win)(intptr_t)win; }
-MPI_Fint MPI_Win_c2f(MPI_Win win) { return (MPI_Fint)(intptr_t)win; }
-MPI_Message MPI_Message_f2c(MPI_Fint message) { return (MPI_Message)(intptr_t)message; }
-MPI_Fint MPI_Message_c2f(MPI_Message message) { return (MPI_Fint)(intptr_t)message; }
-MPI_Session MPI_Session_f2c(MPI_Fint session) { return (MPI_Session)(intptr_t)session; }
-MPI_Fint MPI_Session_c2f(MPI_Session session) { return (MPI_Fint)(intptr_t)session; }
+MPI_Comm MPI_Comm_f2c(int comm) { return (MPI_Comm)(intptr_t)comm; }
+int MPI_Comm_c2f(MPI_Comm comm) { return (int)(intptr_t)comm; }
+MPI_Errhandler MPI_Errhandler_f2c(int errhandler) { return (MPI_Errhandler)(intptr_t)errhandler; }
+int MPI_Errhandler_c2f(MPI_Errhandler errhandler) { return (int)(intptr_t)errhandler; }
+MPI_Group MPI_Group_f2c(int group) { return (MPI_Group)(intptr_t)group; }
+int MPI_Group_c2f(MPI_Group group) { return (int)(intptr_t)group; }
+MPI_Info MPI_Info_f2c(int info) { return (MPI_Info)(intptr_t)info; }
+int MPI_Info_c2f(MPI_Info info) { return (int)(intptr_t)info; }
+MPI_Op MPI_Op_f2c(int op) { return (MPI_Op)(intptr_t)op; }
+int MPI_Op_c2f(MPI_Op op) { return (int)(intptr_t)op; }
+MPI_Request MPI_Request_f2c(int request) { return (MPI_Request)(intptr_t)request; }
+int MPI_Request_c2f(MPI_Request request) { return (int)(intptr_t)request; }
+MPI_Datatype MPI_Type_f2c(int datatype) { return (MPI_Datatype)(intptr_t)datatype; }
+int MPI_Type_c2f(MPI_Datatype datatype) { return (int)(intptr_t)datatype; }
+MPI_Win MPI_Win_f2c(int win) { return (MPI_Win)(intptr_t)win; }
+int MPI_Win_c2f(MPI_Win win) { return (int)(intptr_t)win; }
+MPI_Message MPI_Message_f2c(int message) { return (MPI_Message)(intptr_t)message; }
+int MPI_Message_c2f(MPI_Message message) { return (int)(intptr_t)message; }
+MPI_Session MPI_Session_f2c(int session) { return (MPI_Session)(intptr_t)session; }
+int MPI_Session_c2f(MPI_Session session) { return (int)(intptr_t)session; }
 
 /* --- A.3.14 Application Binary Interface (ABI) --- */
 int MPI_Abi_get_version(int *abi_major, int *abi_minor) { if(abi_major) *abi_major=MPI_ABI_VERSION; if(abi_minor) *abi_minor=MPI_ABI_SUBVERSION; return MPI_SUCCESS; }
@@ -2641,101 +2636,101 @@ MPI_Aint MPI_Aint_diff(MPI_Aint addr1, MPI_Aint addr2) { return addr1 - addr2; }
 #define F_FUNC(name) mpi_##name##_
 
 /* Environmental Management */
-void F_FUNC(init)(MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
-void F_FUNC(finalize)(MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
-void F_FUNC(initialized)(MPI_Fint *flag, MPI_Fint *ierr) { *flag = 1; *ierr = MPI_SUCCESS; }
-void F_FUNC(finalized)(MPI_Fint *flag, MPI_Fint *ierr) { *flag = 0; *ierr = MPI_SUCCESS; }
-void F_FUNC(abort)(MPI_Fint *comm, MPI_Fint *errorcode, MPI_Fint *ierr) { exit(*errorcode); }
+void F_FUNC(init)(int *ierr) { *ierr = MPI_SUCCESS; }
+void F_FUNC(finalize)(int *ierr) { *ierr = MPI_SUCCESS; }
+void F_FUNC(initialized)(int *flag, int *ierr) { *flag = 1; *ierr = MPI_SUCCESS; }
+void F_FUNC(finalized)(int *flag, int *ierr) { *flag = 0; *ierr = MPI_SUCCESS; }
+void F_FUNC(abort)(int *comm, int *errorcode, int *ierr) { exit(*errorcode); }
 double F_FUNC(wtime)(void) { return MPI_Wtime(); }
 double F_FUNC(wtick)(void) { return MPI_Wtick(); }
-void F_FUNC(get_processor_name)(char *name, MPI_Fint *resultlen, MPI_Fint *ierr, size_t name_len) { 
+void F_FUNC(get_processor_name)(char *name, int *resultlen, int *ierr, size_t name_len) { 
     if(name && name_len > 0) name[0] = 'A'; 
     *resultlen = 1; 
     *ierr = MPI_SUCCESS; 
 }
 
 /* Communicators */
-void F_FUNC(comm_size)(MPI_Fint *comm, MPI_Fint *size, MPI_Fint *ierr) { *size = 1; *ierr = MPI_SUCCESS; }
-void F_FUNC(comm_rank)(MPI_Fint *comm, MPI_Fint *rank, MPI_Fint *ierr) { *rank = 0; *ierr = MPI_SUCCESS; }
-void F_FUNC(comm_dup)(MPI_Fint *comm, MPI_Fint *newcomm, MPI_Fint *ierr) { *newcomm = *comm; *ierr = MPI_SUCCESS; }
-void F_FUNC(comm_split)(MPI_Fint *comm, MPI_Fint *color, MPI_Fint *key, MPI_Fint *newcomm, MPI_Fint *ierr) { *newcomm = *comm; *ierr = MPI_SUCCESS; }
-void F_FUNC(comm_free)(MPI_Fint *comm, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
+void F_FUNC(comm_size)(int *comm, int *size, int *ierr) { *size = 1; *ierr = MPI_SUCCESS; }
+void F_FUNC(comm_rank)(int *comm, int *rank, int *ierr) { *rank = 0; *ierr = MPI_SUCCESS; }
+void F_FUNC(comm_dup)(int *comm, int *newcomm, int *ierr) { *newcomm = *comm; *ierr = MPI_SUCCESS; }
+void F_FUNC(comm_split)(int *comm, int *color, int *key, int *newcomm, int *ierr) { *newcomm = *comm; *ierr = MPI_SUCCESS; }
+void F_FUNC(comm_free)(int *comm, int *ierr) { *ierr = MPI_SUCCESS; }
 
 /* Point-to-Point */
-void F_FUNC(send)(void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
-void F_FUNC(recv)(void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *source, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *status, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
-void F_FUNC(isend)(void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
-void F_FUNC(irecv)(void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *source, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
-void F_FUNC(probe)(MPI_Fint *source, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *status, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
-void F_FUNC(iprobe)(MPI_Fint *source, MPI_Fint *tag, MPI_Fint *comm, MPI_Fint *flag, MPI_Fint *status, MPI_Fint *ierr) { *flag = 1; *ierr = MPI_SUCCESS; }
-void F_FUNC(get_count)(MPI_Fint *status, MPI_Fint *datatype, MPI_Fint *count, MPI_Fint *ierr) { *count = 0; *ierr = MPI_SUCCESS; }
-void F_FUNC(sendrecv_replace)(void *buf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *dest, MPI_Fint *sendtag, MPI_Fint *source, MPI_Fint *recvtag, MPI_Fint *comm, MPI_Fint *status, MPI_Fint *ierr) { 
+void F_FUNC(send)(void *buf, int *count, int *datatype, int *dest, int *tag, int *comm, int *ierr) { *ierr = MPI_SUCCESS; }
+void F_FUNC(recv)(void *buf, int *count, int *datatype, int *source, int *tag, int *comm, int *status, int *ierr) { *ierr = MPI_SUCCESS; }
+void F_FUNC(isend)(void *buf, int *count, int *datatype, int *dest, int *tag, int *comm, int *request, int *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
+void F_FUNC(irecv)(void *buf, int *count, int *datatype, int *source, int *tag, int *comm, int *request, int *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
+void F_FUNC(probe)(int *source, int *tag, int *comm, int *status, int *ierr) { *ierr = MPI_SUCCESS; }
+void F_FUNC(iprobe)(int *source, int *tag, int *comm, int *flag, int *status, int *ierr) { *flag = 1; *ierr = MPI_SUCCESS; }
+void F_FUNC(get_count)(int *status, int *datatype, int *count, int *ierr) { *count = 0; *ierr = MPI_SUCCESS; }
+void F_FUNC(sendrecv_replace)(void *buf, int *count, int *datatype, int *dest, int *sendtag, int *source, int *recvtag, int *comm, int *status, int *ierr) { 
     *ierr = MPI_SUCCESS; 
 }
 /* Requests */
-void F_FUNC(wait)(MPI_Fint *request, MPI_Fint *status, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
-void F_FUNC(waitany)(MPI_Fint *count, MPI_Fint *array_of_requests, MPI_Fint *index, MPI_Fint *status, MPI_Fint *ierr) { *index = 1; *ierr = MPI_SUCCESS; }
-void F_FUNC(waitall)(MPI_Fint *count, MPI_Fint *array_of_requests, MPI_Fint *array_of_statuses, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
-void F_FUNC(test)(MPI_Fint *request, MPI_Fint *flag, MPI_Fint *status, MPI_Fint *ierr) { *flag = 1; *ierr = MPI_SUCCESS; }
-void F_FUNC(testany)(MPI_Fint *count, MPI_Fint *array_of_requests, MPI_Fint *index, MPI_Fint *flag, MPI_Fint *status, MPI_Fint *ierr) { *flag = 1; *index = 1; *ierr = MPI_SUCCESS; }
-void F_FUNC(cancel)(MPI_Fint *request, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
-void F_FUNC(request_free)(MPI_Fint *request, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
+void F_FUNC(wait)(int *request, int *status, int *ierr) { *ierr = MPI_SUCCESS; }
+void F_FUNC(waitany)(int *count, int *array_of_requests, int *index, int *status, int *ierr) { *index = 1; *ierr = MPI_SUCCESS; }
+void F_FUNC(waitall)(int *count, int *array_of_requests, int *array_of_statuses, int *ierr) { *ierr = MPI_SUCCESS; }
+void F_FUNC(test)(int *request, int *flag, int *status, int *ierr) { *flag = 1; *ierr = MPI_SUCCESS; }
+void F_FUNC(testany)(int *count, int *array_of_requests, int *index, int *flag, int *status, int *ierr) { *flag = 1; *index = 1; *ierr = MPI_SUCCESS; }
+void F_FUNC(cancel)(int *request, int *ierr) { *ierr = MPI_SUCCESS; }
+void F_FUNC(request_free)(int *request, int *ierr) { *ierr = MPI_SUCCESS; }
 
 /* Collectives */
-void F_FUNC(allreduce)(void *sendbuf, void *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *ierr) { 
+void F_FUNC(allreduce)(void *sendbuf, void *recvbuf, int *count, int *datatype, int *op, int *comm, int *ierr) { 
     *ierr = MPI_Allreduce(sendbuf, recvbuf, *count, MPI_Type_f2c(*datatype), MPI_Op_f2c(*op), MPI_Comm_f2c(*comm)); 
 }
-void F_FUNC(reduce)(void *sendbuf, void *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierr) { 
+void F_FUNC(reduce)(void *sendbuf, void *recvbuf, int *count, int *datatype, int *op, int *root, int *comm, int *ierr) { 
     *ierr = MPI_Reduce(sendbuf, recvbuf, *count, MPI_Type_f2c(*datatype), MPI_Op_f2c(*op), *root, MPI_Comm_f2c(*comm)); 
 }
-void F_FUNC(bcast)(void *buffer, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierr) { 
+void F_FUNC(bcast)(void *buffer, int *count, int *datatype, int *root, int *comm, int *ierr) { 
     *ierr = MPI_Bcast(buffer, *count, MPI_Type_f2c(*datatype), *root, MPI_Comm_f2c(*comm)); 
 }
-void F_FUNC(gather)(void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierr) { 
+void F_FUNC(gather)(void *sendbuf, int *sendcount, int *sendtype, void *recvbuf, int *recvcount, int *recvtype, int *root, int *comm, int *ierr) { 
     *ierr = MPI_Gather(sendbuf, *sendcount, MPI_Type_f2c(*sendtype), recvbuf, *recvcount, MPI_Type_f2c(*recvtype), *root, MPI_Comm_f2c(*comm)); 
 }
-void F_FUNC(scatter)(void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *ierr) { 
+void F_FUNC(scatter)(void *sendbuf, int *sendcount, int *sendtype, void *recvbuf, int *recvcount, int *recvtype, int *root, int *comm, int *ierr) { 
     *ierr = MPI_Scatter(sendbuf, *sendcount, MPI_Type_f2c(*sendtype), recvbuf, *recvcount, MPI_Type_f2c(*recvtype), *root, MPI_Comm_f2c(*comm)); 
 }
-void F_FUNC(allgather)(void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *ierr) { 
+void F_FUNC(allgather)(void *sendbuf, int *sendcount, int *sendtype, void *recvbuf, int *recvcount, int *recvtype, int *comm, int *ierr) { 
     *ierr = MPI_Allgather(sendbuf, *sendcount, MPI_Type_f2c(*sendtype), recvbuf, *recvcount, MPI_Type_f2c(*recvtype), MPI_Comm_f2c(*comm)); 
 }
-void F_FUNC(alltoall)(void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *ierr) { 
+void F_FUNC(alltoall)(void *sendbuf, int *sendcount, int *sendtype, void *recvbuf, int *recvcount, int *recvtype, int *comm, int *ierr) { 
     *ierr = MPI_Alltoall(sendbuf, *sendcount, MPI_Type_f2c(*sendtype), recvbuf, *recvcount, MPI_Type_f2c(*recvtype), MPI_Comm_f2c(*comm)); 
 }
-void F_FUNC(barrier)(MPI_Fint *comm, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
-void F_FUNC(reduce_scatter)(void *sendbuf, void *recvbuf, MPI_Fint *recvcounts, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
-void F_FUNC(ibcast)(void *buffer, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
-void F_FUNC(ireduce_scatter)(void *sendbuf, void *recvbuf, MPI_Fint *recvcounts, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr) { 
+void F_FUNC(barrier)(int *comm, int *ierr) { *ierr = MPI_SUCCESS; }
+void F_FUNC(reduce_scatter)(void *sendbuf, void *recvbuf, int *recvcounts, int *datatype, int *op, int *comm, int *ierr) { *ierr = MPI_SUCCESS; }
+void F_FUNC(ibcast)(void *buffer, int *count, int *datatype, int *root, int *comm, int *request, int *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
+void F_FUNC(ireduce_scatter)(void *sendbuf, void *recvbuf, int *recvcounts, int *datatype, int *op, int *comm, int *request, int *ierr) { 
     *request = 0; 
     *ierr = MPI_SUCCESS; 
 }
 /* Packing */
-void F_FUNC(pack)(void *inbuf, MPI_Fint *incount, MPI_Fint *datatype, void *outbuf, MPI_Fint *outsize, MPI_Fint *position, MPI_Fint *comm, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
-void F_FUNC(unpack)(void *inbuf, MPI_Fint *insize, MPI_Fint *position, void *outbuf, MPI_Fint *outcount, MPI_Fint *datatype, MPI_Fint *comm, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
-void F_FUNC(pack_size)(MPI_Fint *incount, MPI_Fint *datatype, MPI_Fint *comm, MPI_Fint *size, MPI_Fint *ierr) { *size = 0; *ierr = MPI_SUCCESS; }
+void F_FUNC(pack)(void *inbuf, int *incount, int *datatype, void *outbuf, int *outsize, int *position, int *comm, int *ierr) { *ierr = MPI_SUCCESS; }
+void F_FUNC(unpack)(void *inbuf, int *insize, int *position, void *outbuf, int *outcount, int *datatype, int *comm, int *ierr) { *ierr = MPI_SUCCESS; }
+void F_FUNC(pack_size)(int *incount, int *datatype, int *comm, int *size, int *ierr) { *size = 0; *ierr = MPI_SUCCESS; }
 
 /* Types */
-void F_FUNC(type_contiguous)(MPI_Fint *count, MPI_Fint *oldtype, MPI_Fint *newtype, MPI_Fint *ierr) { *newtype = *oldtype; *ierr = MPI_SUCCESS; }
-void F_FUNC(type_commit)(MPI_Fint *datatype, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
-void F_FUNC(type_free)(MPI_Fint *datatype, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
+void F_FUNC(type_contiguous)(int *count, int *oldtype, int *newtype, int *ierr) { *newtype = *oldtype; *ierr = MPI_SUCCESS; }
+void F_FUNC(type_commit)(int *datatype, int *ierr) { *ierr = MPI_SUCCESS; }
+void F_FUNC(type_free)(int *datatype, int *ierr) { *ierr = MPI_SUCCESS; }
 
 /* Ops */
-void F_FUNC(op_create)(void *user_fn, MPI_Fint *commute, MPI_Fint *op, MPI_Fint *ierr) { *op = 1; *ierr = MPI_SUCCESS; }
-void F_FUNC(op_free)(MPI_Fint *op, MPI_Fint *ierr) { *ierr = MPI_SUCCESS; }
+void F_FUNC(op_create)(void *user_fn, int *commute, int *op, int *ierr) { *op = 1; *ierr = MPI_SUCCESS; }
+void F_FUNC(op_free)(int *op, int *ierr) { *ierr = MPI_SUCCESS; }
 
-void F_FUNC(iallgather)(void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
-void F_FUNC(iallgatherv)(void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcounts, MPI_Fint *displs, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
-void F_FUNC(iallreduce)(void *sendbuf, void *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
-void F_FUNC(ialltoall)(void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
-void F_FUNC(ialltoallv)(void *sendbuf, MPI_Fint *sendcounts, MPI_Fint *sdispls, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcounts, MPI_Fint *rdispls, MPI_Fint *recvtype, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
-void F_FUNC(ialltoallw)(void *sendbuf, MPI_Fint *sendcounts, MPI_Fint *sdispls, MPI_Fint *sendtypes, void *recvbuf, MPI_Fint *recvcounts, MPI_Fint *rdispls, MPI_Fint *recvtypes, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
-void F_FUNC(iexscan)(void *sendbuf, void *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
-void F_FUNC(igather)(void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
-void F_FUNC(igatherv)(void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcounts, MPI_Fint *displs, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
-void F_FUNC(ireduce)(void *sendbuf, void *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
-void F_FUNC(iscan)(void *sendbuf, void *recvbuf, MPI_Fint *count, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
-void F_FUNC(iscatter)(void *sendbuf, MPI_Fint *sendcount, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
-void F_FUNC(iscatterv)(void *sendbuf, MPI_Fint *sendcounts, MPI_Fint *displs, MPI_Fint *sendtype, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *recvtype, MPI_Fint *root, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
-void F_FUNC(ibarrier)(MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
-void F_FUNC(ireduce_scatter_block)(void *sendbuf, void *recvbuf, MPI_Fint *recvcount, MPI_Fint *datatype, MPI_Fint *op, MPI_Fint *comm, MPI_Fint *request, MPI_Fint *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
+void F_FUNC(iallgather)(void *sendbuf, int *sendcount, int *sendtype, void *recvbuf, int *recvcount, int *recvtype, int *comm, int *request, int *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
+void F_FUNC(iallgatherv)(void *sendbuf, int *sendcount, int *sendtype, void *recvbuf, int *recvcounts, int *displs, int *recvtype, int *comm, int *request, int *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
+void F_FUNC(iallreduce)(void *sendbuf, void *recvbuf, int *count, int *datatype, int *op, int *comm, int *request, int *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
+void F_FUNC(ialltoall)(void *sendbuf, int *sendcount, int *sendtype, void *recvbuf, int *recvcount, int *recvtype, int *comm, int *request, int *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
+void F_FUNC(ialltoallv)(void *sendbuf, int *sendcounts, int *sdispls, int *sendtype, void *recvbuf, int *recvcounts, int *rdispls, int *recvtype, int *comm, int *request, int *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
+void F_FUNC(ialltoallw)(void *sendbuf, int *sendcounts, int *sdispls, int *sendtypes, void *recvbuf, int *recvcounts, int *rdispls, int *recvtypes, int *comm, int *request, int *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
+void F_FUNC(iexscan)(void *sendbuf, void *recvbuf, int *count, int *datatype, int *op, int *comm, int *request, int *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
+void F_FUNC(igather)(void *sendbuf, int *sendcount, int *sendtype, void *recvbuf, int *recvcount, int *recvtype, int *root, int *comm, int *request, int *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
+void F_FUNC(igatherv)(void *sendbuf, int *sendcount, int *sendtype, void *recvbuf, int *recvcounts, int *displs, int *recvtype, int *root, int *comm, int *request, int *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
+void F_FUNC(ireduce)(void *sendbuf, void *recvbuf, int *count, int *datatype, int *op, int *root, int *comm, int *request, int *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
+void F_FUNC(iscan)(void *sendbuf, void *recvbuf, int *count, int *datatype, int *op, int *comm, int *request, int *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
+void F_FUNC(iscatter)(void *sendbuf, int *sendcount, int *sendtype, void *recvbuf, int *recvcount, int *recvtype, int *root, int *comm, int *request, int *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
+void F_FUNC(iscatterv)(void *sendbuf, int *sendcounts, int *displs, int *sendtype, void *recvbuf, int *recvcount, int *recvtype, int *root, int *comm, int *request, int *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
+void F_FUNC(ibarrier)(int *comm, int *request, int *ierr) { *request = 0; *ierr = MPI_SUCCESS; }
+void F_FUNC(ireduce_scatter_block)(void *sendbuf, void *recvbuf, int *recvcount, int *datatype, int *op, int *comm, int *request, int *ierr) { *request = 0; *ierr = MPI_SUCCESS; }

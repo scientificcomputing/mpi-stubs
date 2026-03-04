@@ -13,13 +13,6 @@ extern "C" {
 #define MPI_ABI_VERSION    1
 #define MPI_ABI_SUBVERSION 0
 
-/* MPI_Fint - Integers used for fortran functions */
-#if !defined(MPI_ABI_Fint)
-#define MPI_ABI_Fint int
-#endif
-typedef MPI_ABI_Fint MPI_Fint;
-#undef  MPI_ABI_Fint
-
 /* MPI_Aint is defined to be intptr_t (or equivalent to it, if compiler support is absent).
  * The only acceptable alternative to intptr_t is the C89 type equivalent to it. */
 #if !defined(MPI_ABI_Aint)
@@ -1916,6 +1909,9 @@ typedef MPI_Comm_errhandler_function MPI_Comm_errhandler_fn;
 typedef MPI_File_errhandler_function MPI_File_errhandler_fn;
 typedef MPI_Win_errhandler_function MPI_Win_errhandler_fn;
 
+int MPI_Type_create_f90_complex(int p, int r, MPI_Datatype *newtype);
+int MPI_Type_create_f90_integer(int r, MPI_Datatype *newtype);
+int MPI_Type_create_f90_real(int p, int r, MPI_Datatype *newtype);
 int MPI_Type_match_size(int typeclass, int size, MPI_Datatype *datatype);
 
 
