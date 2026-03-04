@@ -2,21 +2,16 @@ cmake_minimum_required(VERSION 3.15)
 project(mpistub LANGUAGES C CXX Fortran)
 
 # Source files
-set(MPI_STUB_SOURCES src/mpi.c src/mpi.f90)
-
-# Tell CMake where to put the generated .mod file during build and install
-set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/mod)
+set(MPI_STUB_SOURCES src/mpi.c)
 
 # Build as a shared library
 add_library(mpistub SHARED ${MPI_STUB_SOURCES})
 
 # Force the output name to "mpi" to generate libmpi.so
 set_target_properties(mpistub PROPERTIES
-    OUTPUT_NAME "mpi"
+    OUTPUT_NAME "mpi_abi"
     VERSION "1.0.0"
     SOVERSION "1"
-    C_STANDARD 11
-    C_STANDARD_REQUIRED YES
 )
 
 # Setup include directories
@@ -45,8 +40,6 @@ set(WRAPPER_SCRIPT_FC "${SCRIPT_BASE}exec gfortran -I\"$DIR/${CMAKE_INSTALL_INCL
 # Copy the physical mpiexec script and FORCE Unix line endings (LF)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/bin/mpiexec ${CMAKE_CURRENT_BINARY_DIR}/mpiexec NEWLINE_STYLE LF)
 
-
-
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/mpicc ${WRAPPER_SCRIPT_C})
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/mpicxx ${WRAPPER_SCRIPT_CXX})
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/mpif90 ${WRAPPER_SCRIPT_FC})
@@ -72,7 +65,6 @@ install(TARGETS mpistub
 
 install(FILES 
     include/mpi.h 
-    include/mpif.h 
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
@@ -83,10 +75,6 @@ install(PROGRAMS
     ${CMAKE_CURRENT_BINARY_DIR}/mpiexec
     DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
-
-install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/mod/ 
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} 
-        OPTIONAL)
 
 # --- Testing ---
 enable_testing()
