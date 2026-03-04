@@ -13,6 +13,13 @@ extern "C" {
 #define MPI_ABI_VERSION    1
 #define MPI_ABI_SUBVERSION 0
 
+/* MPI_Fint - Integers used for fortran functions */
+#if !defined(MPI_ABI_Fint)
+#define MPI_ABI_Fint int
+#endif
+typedef MPI_ABI_Fint MPI_Fint;
+#undef  MPI_ABI_Fint
+
 /* MPI_Aint is defined to be intptr_t (or equivalent to it, if compiler support is absent).
  * The only acceptable alternative to intptr_t is the C89 type equivalent to it. */
 #if !defined(MPI_ABI_Aint)
