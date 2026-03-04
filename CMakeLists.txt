@@ -14,7 +14,7 @@ add_library(mpistub SHARED ${MPI_STUB_SOURCES})
 set_target_properties(mpistub PROPERTIES
     OUTPUT_NAME "mpi"
     VERSION "1.0.0"
-    SOVERSION "1"
+    SOVERSION "12"
     C_STANDARD 11
     C_STANDARD_REQUIRED YES
 )
