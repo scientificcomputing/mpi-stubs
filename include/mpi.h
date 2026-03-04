@@ -1916,24 +1916,24 @@ typedef MPI_Comm_errhandler_function MPI_Comm_errhandler_fn;
 typedef MPI_File_errhandler_function MPI_File_errhandler_fn;
 typedef MPI_Win_errhandler_function MPI_Win_errhandler_fn;
 
-typedef struct {
-    int MPI_SOURCE;
-    int MPI_TAG;
-    int MPI_ERROR;
-    int MPI_internal[5];
-} MPI_F08_status;
+// typedef struct {
+//     int MPI_SOURCE;
+//     int MPI_TAG;
+//     int MPI_ERROR;
+//     int MPI_internal[5];
+// } MPI_F08_status;
 
 /* --- A.3.13 Language Bindings --- */
-int MPI_Status_c2f08(const MPI_Status *c_status, MPI_F08_status *f08_status);
-int MPI_Status_c2f(const MPI_Status *c_status, MPI_Fint *f_status);
-int MPI_Status_f082c(const MPI_F08_status *f08_status, MPI_Status *c_status);
-int MPI_Status_f082f(const MPI_F08_status *f08_status, MPI_Fint *f_status);
-int MPI_Status_f2c(const MPI_Fint *f_status, MPI_Status *c_status);
-int MPI_Status_f2f08(const MPI_Fint *f_status, MPI_F08_status *f08_status);
-int MPI_Type_create_f90_complex(int p, int r, MPI_Datatype *newtype);
-int MPI_Type_create_f90_integer(int r, MPI_Datatype *newtype);
-int MPI_Type_create_f90_real(int p, int r, MPI_Datatype *newtype);
-int MPI_Type_match_size(int typeclass, int size, MPI_Datatype *datatype);
+// int MPI_Status_c2f08(const MPI_Status *c_status, MPI_F08_status *f08_status);
+// int MPI_Status_c2f(const MPI_Status *c_status, MPI_Fint *f_status);
+// int MPI_Status_f082c(const MPI_F08_status *f08_status, MPI_Status *c_status);
+// int MPI_Status_f082f(const MPI_F08_status *f08_status, MPI_Fint *f_status);
+// int MPI_Status_f2c(const MPI_Fint *f_status, MPI_Status *c_status);
+// int MPI_Status_f2f08(const MPI_Fint *f_status, MPI_F08_status *f08_status);
+// int MPI_Type_create_f90_complex(int p, int r, MPI_Datatype *newtype);
+// int MPI_Type_create_f90_integer(int r, MPI_Datatype *newtype);
+// int MPI_Type_create_f90_real(int p, int r, MPI_Datatype *newtype);
+// int MPI_Type_match_size(int typeclass, int size, MPI_Datatype *datatype);
 
 #if defined(__cplusplus)
 }

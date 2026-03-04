@@ -2427,16 +2427,16 @@ int MPI_Register_datarep_c(const char *datarep, MPI_Datarep_conversion_function_
 int MPI_Register_datarep(const char *datarep, MPI_Datarep_conversion_function *read_conversion_fn, MPI_Datarep_conversion_function *write_conversion_fn, MPI_Datarep_extent_function *dtype_file_extent_fn, void *extra_state) { return MPI_SUCCESS; }
 
 /* --- A.3.13 Language Bindings --- */
-int MPI_Status_c2f08(const MPI_Status *c_status, MPI_F08_status *f08_status) { if(c_status && f08_status) safe_memcpy(f08_status, c_status, sizeof(MPI_Status)); return MPI_SUCCESS; }
-int MPI_Status_c2f(const MPI_Status *c_status, MPI_Fint *f_status) { if(c_status && f_status) safe_memcpy(f_status, c_status, sizeof(MPI_Status)); return MPI_SUCCESS; }
-int MPI_Status_f082c(const MPI_F08_status *f08_status, MPI_Status *c_status) { if(c_status && f08_status) safe_memcpy(c_status, f08_status, sizeof(MPI_Status)); return MPI_SUCCESS; }
-int MPI_Status_f082f(const MPI_F08_status *f08_status, MPI_Fint *f_status) { if(f_status && f08_status) safe_memcpy(f_status, f08_status, sizeof(MPI_Status)); return MPI_SUCCESS; }
-int MPI_Status_f2c(const MPI_Fint *f_status, MPI_Status *c_status) { if(c_status && f_status) safe_memcpy(c_status, f_status, sizeof(MPI_Status)); return MPI_SUCCESS; }
-int MPI_Status_f2f08(const MPI_Fint *f_status, MPI_F08_status *f08_status) { if(f_status && f08_status) safe_memcpy(f08_status, f_status, sizeof(MPI_Status)); return MPI_SUCCESS; }
-int MPI_Type_create_f90_complex(int p, int r, MPI_Datatype *newtype) { if(newtype) *newtype=MPI_COMPLEX; return MPI_SUCCESS; }
-int MPI_Type_create_f90_integer(int r, MPI_Datatype *newtype) { if(newtype) *newtype=MPI_INTEGER; return MPI_SUCCESS; }
-int MPI_Type_create_f90_real(int p, int r, MPI_Datatype *newtype) { if(newtype) *newtype=MPI_REAL; return MPI_SUCCESS; }
-int MPI_Type_match_size(int typeclass, int size, MPI_Datatype *datatype) { if(datatype) *datatype=MPI_DATATYPE_NULL; return MPI_SUCCESS; }
+// int MPI_Status_c2f08(const MPI_Status *c_status, MPI_F08_status *f08_status) { if(c_status && f08_status) safe_memcpy(f08_status, c_status, sizeof(MPI_Status)); return MPI_SUCCESS; }
+// int MPI_Status_c2f(const MPI_Status *c_status, MPI_Fint *f_status) { if(c_status && f_status) safe_memcpy(f_status, c_status, sizeof(MPI_Status)); return MPI_SUCCESS; }
+// int MPI_Status_f082c(const MPI_F08_status *f08_status, MPI_Status *c_status) { if(c_status && f08_status) safe_memcpy(c_status, f08_status, sizeof(MPI_Status)); return MPI_SUCCESS; }
+// int MPI_Status_f082f(const MPI_F08_status *f08_status, MPI_Fint *f_status) { if(f_status && f08_status) safe_memcpy(f_status, f08_status, sizeof(MPI_Status)); return MPI_SUCCESS; }
+// int MPI_Status_f2c(const MPI_Fint *f_status, MPI_Status *c_status) { if(c_status && f_status) safe_memcpy(c_status, f_status, sizeof(MPI_Status)); return MPI_SUCCESS; }
+// int MPI_Status_f2f08(const MPI_Fint *f_status, MPI_F08_status *f08_status) { if(f_status && f08_status) safe_memcpy(f08_status, f_status, sizeof(MPI_Status)); return MPI_SUCCESS; }
+// int MPI_Type_create_f90_complex(int p, int r, MPI_Datatype *newtype) { if(newtype) *newtype=MPI_COMPLEX; return MPI_SUCCESS; }
+// int MPI_Type_create_f90_integer(int r, MPI_Datatype *newtype) { if(newtype) *newtype=MPI_INTEGER; return MPI_SUCCESS; }
+// int MPI_Type_create_f90_real(int p, int r, MPI_Datatype *newtype) { if(newtype) *newtype=MPI_REAL; return MPI_SUCCESS; }
+// int MPI_Type_match_size(int typeclass, int size, MPI_Datatype *datatype) { if(datatype) *datatype=MPI_DATATYPE_NULL; return MPI_SUCCESS; }
 
 MPI_Comm MPI_Comm_f2c(MPI_Fint comm) { return (MPI_Comm)(intptr_t)comm; }
 MPI_Fint MPI_Comm_c2f(MPI_Comm comm) { return (MPI_Fint)(intptr_t)comm; }
