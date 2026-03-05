@@ -59,6 +59,9 @@ RUN python3 -m venv ${VIRTUAL_ENV} && \
 RUN env MPICC="${STUBS_DIR}/bin/mpicc" \
     pip install --no-cache-dir --no-build-isolation --no-binary mpi4py mpi4py
 
+RUN python3 -c "from mpi4py import MPI; print(MPI.Get_version())" && \
+    python3 -c "import numpy; print(numpy.__version__)"
+
 # --- 4. System Libraries (Spdlog, Doxygen, KaHIP, HDF5, ADIOS2, GMSH) ---
 RUN wget -nc --quiet https://github.com/gabime/spdlog/archive/refs/tags/v${SPDLOG_VERSION}.tar.gz && \
     tar xfz v${SPDLOG_VERSION}.tar.gz && \

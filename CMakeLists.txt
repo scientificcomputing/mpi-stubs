@@ -6,14 +6,28 @@ option(BUILD_SHARED_LIBS "Build libraries as SHARED" TRUE)
 add_library(mpi_abi mpi.c)
 set_target_properties(mpi_abi PROPERTIES VERSION 0)
 set_target_properties(mpi_abi PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS 1)
+# Tell CMake where to put the generated .mod file during build and install
+set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/mod)
+
+# Build as a shared library
+add_library(mpistub SHARED ${MPI_STUB_SOURCES})
+
+# Force the output name to "mpi" to generate libmpi.so
+set_target_properties(mpistub PROPERTIES
+    OUTPUT_NAME "mpi"
+    VERSION "1.0.0"
+    SOVERSION "12"
+    C_STANDARD 11
+    C_STANDARD_REQUIRED YES
+)
+
+# Create standard CMake namespace aliases
+add_library(MPI::MPI_C ALIAS mpistub)
+add_library(MPI::MPI_CXX ALIAS mpistub)
 
 include(GNUInstallDirs)
 install(FILES mpi.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(TARGETS mpi_abi DESTINATION ${CMAKE_INSTALL_LIBDIR})
-
-# Create standard CMake namespace aliases
-add_library(MPI::MPI_C ALIAS mpi_abi)
-add_library(MPI::MPI_CXX ALIAS mpi_abi)
 
 # Generate wrappers
 
