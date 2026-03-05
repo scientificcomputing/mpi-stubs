@@ -1,51 +1,33 @@
-cmake_minimum_required(VERSION 3.15)
-project(mpistub LANGUAGES C CXX Fortran)
+cmake_minimum_required(VERSION 3.5.0...4.1.0)
+project(mpi-abi-stubs VERSION 5.0 LANGUAGES C)
 
-# Source files
-set(MPI_STUB_SOURCES src/mpi.c src/mpi.f90)
+option(BUILD_SHARED_LIBS "Build libraries as SHARED" TRUE)
 
+add_library(mpi_abi mpi.c)
+set_target_properties(mpi_abi PROPERTIES VERSION 0)
+set_target_properties(mpi_abi PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS 1)
 # Tell CMake where to put the generated .mod file during build and install
 set(CMAKE_Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/mod)
 
-# Build as a shared library
-add_library(mpistub SHARED ${MPI_STUB_SOURCES})
-
-# Force the output name to "mpi" to generate libmpi.so
-set_target_properties(mpistub PROPERTIES
-    OUTPUT_NAME "mpi"
-    VERSION "1.0.0"
-    SOVERSION "12"
-    C_STANDARD 11
-    C_STANDARD_REQUIRED YES
-)
-
-# Setup include directories
-target_include_directories(mpistub PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-)
-
 # Create standard CMake namespace aliases
-add_library(MPI::MPI_C ALIAS mpistub)
-add_library(MPI::MPI_CXX ALIAS mpistub)
+add_library(MPI::MPI_C ALIAS mpi_abi)
+add_library(MPI::MPI_CXX ALIAS mpi_abi)
 
 include(GNUInstallDirs)
+install(FILES mpi.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(TARGETS mpi_abi DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
-# ==============================================================================
-# WRAPPER GENERATION
-# ==============================================================================
+# Generate wrappers
 
 # Use $0 to resolve the base directory at runtime so scripts are relocatable in Python wheels
 set(SCRIPT_BASE "#!/bin/sh\nDIR=\"$( cd \"$( dirname \"$0\" )/..\" && pwd )\"\n")
 
-set(WRAPPER_SCRIPT_C "${SCRIPT_BASE}exec \"${CMAKE_C_COMPILER}\" -I\"$DIR/${CMAKE_INSTALL_INCLUDEDIR}\" \"$@\" -L\"$DIR/${CMAKE_INSTALL_LIBDIR}\" -Wl,-rpath,\"$DIR/${CMAKE_INSTALL_LIBDIR}\" -lmpi\n")
-set(WRAPPER_SCRIPT_CXX "${SCRIPT_BASE}exec \"${CMAKE_CXX_COMPILER}\" -I\"$DIR/${CMAKE_INSTALL_INCLUDEDIR}\" \"$@\" -L\"$DIR/${CMAKE_INSTALL_LIBDIR}\" -Wl,-rpath,\"$DIR/${CMAKE_INSTALL_LIBDIR}\" -lmpi\n")
-set(WRAPPER_SCRIPT_FC "${SCRIPT_BASE}exec gfortran -I\"$DIR/${CMAKE_INSTALL_INCLUDEDIR}\" \"$@\" -L\"$DIR/${CMAKE_INSTALL_LIBDIR}\" -Wl,-rpath,\"$DIR/${CMAKE_INSTALL_LIBDIR}\" -lmpi\n")
+set(WRAPPER_SCRIPT_C "${SCRIPT_BASE}exec \"${CMAKE_C_COMPILER}\" -I\"$DIR/${CMAKE_INSTALL_INCLUDEDIR}\" \"$@\" -L\"$DIR/${CMAKE_INSTALL_LIBDIR}\" -Wl,-rpath,\"$DIR/${CMAKE_INSTALL_LIBDIR}\" -lmpi_abi\n")
+set(WRAPPER_SCRIPT_CXX "${SCRIPT_BASE}exec \"${CMAKE_CXX_COMPILER}\" -I\"$DIR/${CMAKE_INSTALL_INCLUDEDIR}\" \"$@\" -L\"$DIR/${CMAKE_INSTALL_LIBDIR}\" -Wl,-rpath,\"$DIR/${CMAKE_INSTALL_LIBDIR}\" -lmpi_abi\n")
+set(WRAPPER_SCRIPT_FC "${SCRIPT_BASE}exec gfortran -I\"$DIR/${CMAKE_INSTALL_INCLUDEDIR}\" \"$@\" -L\"$DIR/${CMAKE_INSTALL_LIBDIR}\" -Wl,-rpath,\"$DIR/${CMAKE_INSTALL_LIBDIR}\" -lmpi_abi\n")
 
 # Copy the physical mpiexec script and FORCE Unix line endings (LF)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/bin/mpiexec ${CMAKE_CURRENT_BINARY_DIR}/mpiexec NEWLINE_STYLE LF)
-
-
 
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/mpicc ${WRAPPER_SCRIPT_C})
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/mpicxx ${WRAPPER_SCRIPT_CXX})
@@ -62,7 +44,7 @@ file(CHMOD ${CMAKE_CURRENT_BINARY_DIR}/mpiexec PERMISSIONS OWNER_READ OWNER_WRIT
 # INSTALLATION
 # ==============================================================================
 
-install(TARGETS mpistub
+install(TARGETS mpi_abi
     EXPORT MPIStubTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -71,8 +53,7 @@ install(TARGETS mpistub
 )
 
 install(FILES 
-    include/mpi.h 
-    include/mpif.h 
+    mpi.h 
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
