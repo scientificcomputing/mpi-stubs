@@ -12,11 +12,12 @@ add_library(mpistub SHARED ${MPI_STUB_SOURCES})
 
 # Force the output name to "mpi" to generate libmpi.so
 set_target_properties(mpistub PROPERTIES
-    OUTPUT_NAME "mpi"
-    VERSION "1.0.0"
-    SOVERSION "12"
+    OUTPUT_NAME "mpi_abi"
+    VERSION 0.0.0
+    SOVERSION 0
     C_STANDARD 11
     C_STANDARD_REQUIRED YES
+    WINDOWS_EXPORT_ALL_SYMBOLS 1
 )
 
 # Setup include directories
