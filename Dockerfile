@@ -56,7 +56,7 @@ RUN python3 -m venv ${VIRTUAL_ENV} && \
     pip install --no-cache-dir cython numpy==${NUMPY_VERSION}
 
 # Install mpi4py against our stub
-RUN env MPICC="${STUBS_DIR}/bin/mpicc" \
+RUN env MPI4PY_BUILD_MPIABI=1 MPICC="${STUBS_DIR}/bin/mpicc" \
     pip install --no-cache-dir --no-build-isolation --no-binary mpi4py mpi4py
 
 RUN python3 -c "from mpi4py import MPI; print(MPI.Get_version())" && \
